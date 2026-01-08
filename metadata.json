@@ -1,0 +1,8 @@
+{
+  "name": "AI Agent Workbench",
+  "description": "A centralized dashboard for managing modular AI agents including UI automation, data profiling, and quality checking powered by Gemini 3.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
