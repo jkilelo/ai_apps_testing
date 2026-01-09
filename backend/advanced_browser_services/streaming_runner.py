@@ -7,6 +7,9 @@ Runs browser-use agents with real-time log streaming via SSE.
 import asyncio
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
+from pathlib import Path
+import json
+from datetime import datetime
 
 from browser_use import Agent
 
@@ -289,10 +292,22 @@ class StreamingAgentRunner:
         """
         session.emit_info(f"Initializing UI Testing Agent...")
         session.emit_info(f"Task: {task}")
-        
+
         # Setup output directory for this session
         output_dir = f"./test_outputs/{session.session_id}"
-        
+
+        # Save session metadata with task for re-run capability
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+        metadata = {
+            "session_id": session.session_id,
+            "task": task,
+            "max_steps": max_steps,
+            "headless": headless,
+            "created_at": datetime.now().isoformat(),
+        }
+        (output_path / "metadata.json").write_text(json.dumps(metadata, indent=2))
+
         config = OutputConfig(
             output_directory=output_dir,
             generate_playwright_code=True,

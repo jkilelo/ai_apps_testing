@@ -430,7 +430,14 @@ const UIAutomator: React.FC = () => {
 
       {/* Session Browser Panel */}
       {showSessionBrowser && (
-        <SessionBrowser onClose={() => setShowSessionBrowser(false)} />
+        <SessionBrowser
+          onClose={() => setShowSessionBrowser(false)}
+          onRerun={(task) => {
+            setPrompt(task);
+            setMode('basic');
+            setShowSessionBrowser(false);
+          }}
+        />
       )}
 
       {/* Mode Selector */}

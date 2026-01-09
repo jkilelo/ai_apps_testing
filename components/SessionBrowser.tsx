@@ -5,9 +5,10 @@ import ArtifactsViewer from './ArtifactsViewer';
 
 interface SessionBrowserProps {
   onClose?: () => void;
+  onRerun?: (task: string) => void;
 }
 
-const SessionBrowser: React.FC<SessionBrowserProps> = ({ onClose }) => {
+const SessionBrowser: React.FC<SessionBrowserProps> = ({ onClose, onRerun }) => {
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -140,41 +141,69 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onClose }) => {
         ) : (
           <div className="space-y-2">
             {sessions.map((session) => (
-              <button
+              <div
                 key={session.session_id}
-                onClick={() => setSelectedSession(session.session_id)}
-                className="w-full flex items-center gap-4 p-4 bg-slate-50 hover:bg-blue-50 rounded-lg border border-slate-200 hover:border-blue-300 transition-all text-left group"
+                className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden"
               >
-                {/* Session icon */}
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                  session.has_report ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-500'
-                }`}>
-                  <i className={`fas ${session.has_report ? 'fa-check-circle' : 'fa-clock'} text-xl`}></i>
-                </div>
+                <button
+                  onClick={() => setSelectedSession(session.session_id)}
+                  className="w-full flex items-center gap-4 p-4 hover:bg-blue-50 transition-all text-left group"
+                >
+                  {/* Session icon */}
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    session.has_report ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-500'
+                  }`}>
+                    <i className={`fas ${session.has_report ? 'fa-check-circle' : 'fa-clock'} text-xl`}></i>
+                  </div>
 
-                {/* Session info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-slate-800 font-mono text-sm">
-                      {session.session_id}
-                    </span>
-                    {session.has_report && (
-                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded-full">
-                        Has Report
+                  {/* Session info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-slate-800 font-mono text-sm">
+                        {session.session_id}
                       </span>
+                      {session.has_report && (
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded-full">
+                          Has Report
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">
+                      <i className="fas fa-calendar-alt mr-1"></i>
+                      {formatDate(session.created_at)}
+                    </div>
+                  </div>
+
+                  {/* Arrow */}
+                  <div className="text-slate-300 group-hover:text-blue-500 transition-colors">
+                    <i className="fas fa-chevron-right"></i>
+                  </div>
+                </button>
+
+                {/* Task preview and re-run button */}
+                {session.task && (
+                  <div className="px-4 pb-3 pt-0 flex items-center gap-3 border-t border-slate-100">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-slate-500 truncate" title={session.task}>
+                        <i className="fas fa-terminal mr-1 text-slate-400"></i>
+                        {session.task.length > 80 ? session.task.substring(0, 80) + '...' : session.task}
+                      </p>
+                    </div>
+                    {onRerun && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRerun(session.task!);
+                        }}
+                        className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs rounded-md transition-colors flex items-center gap-1.5 flex-shrink-0"
+                      >
+                        <i className="fas fa-redo"></i>
+                        Re-run
+                      </button>
                     )}
                   </div>
-                  <div className="text-xs text-slate-500 mt-1">
-                    <i className="fas fa-calendar-alt mr-1"></i>
-                    {formatDate(session.created_at)}
-                  </div>
-                </div>
-
-                {/* Arrow */}
-                <div className="text-slate-300 group-hover:text-blue-500 transition-colors">
-                  <i className="fas fa-chevron-right"></i>
-                </div>
-              </button>
+                )}
+              </div>
             ))}
           </div>
         )}

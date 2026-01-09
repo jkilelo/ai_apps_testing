@@ -215,7 +215,7 @@ Configurable via `OutputConfig` class in `models/output_config.py`.
 ### Phase 4: Advanced Features - IN PROGRESS
 - [ ] Comparison views
 - [x] History/session browser
-- [ ] Re-run capabilities (requires storing task in session)
+- [x] Re-run capabilities
 
 ---
 
@@ -323,12 +323,15 @@ Configurable via `OutputConfig` class in `models/output_config.py`.
 - `GET /artifacts/{session_id}/code` - Get Playwright code content
 - `GET /sessions` - List all test sessions
 
-### v1.4.0 - Session History Browser (Phase 4)
+### v1.4.0 - Session History & Re-run (Phase 4)
 **Date:** 2026-01-09
 
 **Files Changed:**
 - `components/SessionBrowser.tsx` - New component for browsing past test sessions
 - `apps/UIAutomator.tsx` - Added header with history toggle button
+- `backend/advanced_browser_services/streaming_runner.py` - Save task metadata
+- `backend/main.py` - Return task info in sessions list
+- `services/geminiService.ts` - Extended SessionInfo with task fields
 
 **New Features:**
 1. **Session History Browser**
@@ -336,8 +339,14 @@ Configurable via `OutputConfig` class in `models/output_config.py`.
    - Session status indicators (has report, pending)
    - Click to view session artifacts
    - Refresh button to reload sessions
+   - Task preview for each session
 
-2. **UI Header**
+2. **Re-run Capabilities**
+   - Task stored in session metadata.json
+   - Re-run button on sessions with stored tasks
+   - Loads task back into input and switches to basic mode
+
+3. **UI Header**
    - Added "UI Automator" title
    - Toggle button for session history panel
 

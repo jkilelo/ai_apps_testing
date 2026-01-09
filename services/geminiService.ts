@@ -416,6 +416,8 @@ export interface SessionInfo {
     session_id: string;
     created_at: number;
     has_report: boolean;
+    task?: string | null;
+    max_steps?: number | null;
 }
 
 export interface PlaywrightCode {

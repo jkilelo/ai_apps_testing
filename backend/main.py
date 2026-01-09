@@ -631,11 +631,30 @@ async def list_sessions():
         if item.is_dir():
             # Get session info
             report_json = item / "reports" / "report.json"
+            metadata_file = item / "metadata.json"
+
             session_info = {
                 "session_id": item.name,
                 "created_at": item.stat().st_mtime,
                 "has_report": report_json.exists(),
+                "task": None,
+                "max_steps": None,
             }
+
+            # Read metadata if available
+            if metadata_file.exists():
+                try:
+                    metadata = json.loads(metadata_file.read_text())
+                    session_info["task"] = metadata.get("task")
+                    session_info["max_steps"] = metadata.get("max_steps")
+                    if metadata.get("created_at"):
+                        # Use metadata timestamp if available
+                        from datetime import datetime
+                        dt = datetime.fromisoformat(metadata["created_at"])
+                        session_info["created_at"] = dt.timestamp()
+                except:
+                    pass
+
             sessions.append(session_info)
 
     # Sort by creation time (newest first)
