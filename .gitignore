@@ -81,3 +81,7 @@ push_out.txt
 
 # Local test scripts (optional - remove if you want to commit them)
 backend/test_*.py
+
+# Browser profiles (cache data)
+browser_profiles/
+**/browser_profiles/
