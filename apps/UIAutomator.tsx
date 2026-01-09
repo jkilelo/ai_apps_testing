@@ -11,6 +11,7 @@ import {
 import LogViewer from '../components/LogViewer';
 import TestResultsPanel from '../components/TestResultsPanel';
 import ArtifactsViewer from '../components/ArtifactsViewer';
+import SessionBrowser from '../components/SessionBrowser';
 import { ExecutionLog, AgentMode, EventType, LogLevel } from '../types';
 
 const MODES: { id: AgentMode; name: string; icon: string; description: string }[] = [
@@ -27,6 +28,7 @@ const UIAutomator: React.FC = () => {
   const [logs, setLogs] = useState<ExecutionLog[]>([]);
   const [result, setResult] = useState<{ success: boolean; summary: string; data?: Record<string, unknown> } | null>(null);
   const [currentStep, setCurrentStep] = useState<number>(0);
+  const [showSessionBrowser, setShowSessionBrowser] = useState(false);
 
   // Cleanup function ref for aborting streams
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -407,6 +409,30 @@ const UIAutomator: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header with History button */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
+          <i className="fas fa-robot text-blue-500"></i>
+          UI Automator
+        </h1>
+        <button
+          onClick={() => setShowSessionBrowser(!showSessionBrowser)}
+          className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+            showSessionBrowser
+              ? 'bg-blue-100 text-blue-700 border-2 border-blue-500'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+          }`}
+        >
+          <i className="fas fa-history"></i>
+          {showSessionBrowser ? 'Hide History' : 'Session History'}
+        </button>
+      </div>
+
+      {/* Session Browser Panel */}
+      {showSessionBrowser && (
+        <SessionBrowser onClose={() => setShowSessionBrowser(false)} />
+      )}
+
       {/* Mode Selector */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
         <h2 className="text-sm font-semibold mb-3 text-slate-600">Select Mode</h2>

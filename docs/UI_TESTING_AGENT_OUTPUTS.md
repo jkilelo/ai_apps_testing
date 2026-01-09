@@ -212,10 +212,10 @@ Configurable via `OutputConfig` class in `models/output_config.py`.
 - [x] Download buttons for all artifacts
 - [x] GIF/Video playback in Reports tab
 
-### Phase 4: Advanced Features
+### Phase 4: Advanced Features - IN PROGRESS
 - [ ] Comparison views
-- [ ] History/session browser
-- [ ] Re-run capabilities
+- [x] History/session browser
+- [ ] Re-run capabilities (requires storing task in session)
 
 ---
 
@@ -323,6 +323,24 @@ Configurable via `OutputConfig` class in `models/output_config.py`.
 - `GET /artifacts/{session_id}/code` - Get Playwright code content
 - `GET /sessions` - List all test sessions
 
+### v1.4.0 - Session History Browser (Phase 4)
+**Date:** 2026-01-09
+
+**Files Changed:**
+- `components/SessionBrowser.tsx` - New component for browsing past test sessions
+- `apps/UIAutomator.tsx` - Added header with history toggle button
+
+**New Features:**
+1. **Session History Browser**
+   - List all past test sessions with timestamps
+   - Session status indicators (has report, pending)
+   - Click to view session artifacts
+   - Refresh button to reload sessions
+
+2. **UI Header**
+   - Added "UI Automator" title
+   - Toggle button for session history panel
+
 ---
 
 ## 8. File Locations
@@ -338,3 +356,4 @@ Configurable via `OutputConfig` class in `models/output_config.py`.
 - Log Viewer: `components/LogViewer.tsx`
 - Results Panel: `components/TestResultsPanel.tsx`
 - Artifacts Viewer: `components/ArtifactsViewer.tsx`
+- Session Browser: `components/SessionBrowser.tsx`
