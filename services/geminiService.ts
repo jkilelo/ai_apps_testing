@@ -389,3 +389,71 @@ export const streamComparePages = (
         onComplete,
     );
 };
+
+
+// ============== Artifacts API ==============
+
+export interface ArtifactInfo {
+    name: string;
+    type: string;
+    path: string;
+    size?: number;
+    url: string;
+}
+
+export interface SessionArtifacts {
+    session_id: string;
+    output_directory: string;
+    artifacts: ArtifactInfo[];
+    html_report?: string;
+    json_report?: string;
+    playwright_code?: string;
+    screenshots: string[];
+    video?: string;
+}
+
+export interface SessionInfo {
+    session_id: string;
+    created_at: number;
+    has_report: boolean;
+}
+
+export interface PlaywrightCode {
+    filename: string;
+    content: string;
+    path: string;
+}
+
+export const getSessionArtifacts = async (sessionId: string): Promise<SessionArtifacts> => {
+    const response = await fetch(`${API_BASE_URL}/artifacts/${sessionId}`);
+
+    if (!response.ok) {
+        throw new Error(`Failed to get artifacts: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
+export const getArtifactUrl = (sessionId: string, filePath: string): string => {
+    return `${API_BASE_URL}/artifacts/${sessionId}/file/${filePath}`;
+};
+
+export const getPlaywrightCode = async (sessionId: string): Promise<PlaywrightCode> => {
+    const response = await fetch(`${API_BASE_URL}/artifacts/${sessionId}/code`);
+
+    if (!response.ok) {
+        throw new Error(`Failed to get code: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
+export const listSessions = async (): Promise<{ sessions: SessionInfo[] }> => {
+    const response = await fetch(`${API_BASE_URL}/sessions`);
+
+    if (!response.ok) {
+        throw new Error(`Failed to list sessions: ${response.statusText}`);
+    }
+
+    return response.json();
+};

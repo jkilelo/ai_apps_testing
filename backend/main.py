@@ -7,8 +7,10 @@ if sys.platform == 'win32':
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from pathlib import Path
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
@@ -469,6 +471,177 @@ async def stream_compare_pages(request: StreamingComparePagesRequest):
             "X-Accel-Buffering": "no",
         }
     )
+
+
+# ============== Artifacts Endpoints ==============
+
+# Base directory for test outputs
+TEST_OUTPUTS_DIR = Path("./test_outputs")
+
+
+class ArtifactInfo(BaseModel):
+    """Information about a single artifact."""
+    name: str
+    type: str  # 'file' or 'directory'
+    path: str
+    size: Optional[int] = None
+    url: str
+
+
+class SessionArtifacts(BaseModel):
+    """All artifacts for a session."""
+    session_id: str
+    output_directory: str
+    artifacts: List[ArtifactInfo]
+    html_report: Optional[str] = None
+    json_report: Optional[str] = None
+    playwright_code: Optional[str] = None
+    screenshots: List[str] = []
+    video: Optional[str] = None
+
+
+@app.get("/artifacts/{session_id}", response_model=SessionArtifacts)
+async def get_session_artifacts(session_id: str):
+    """
+    Get list of all artifacts for a session.
+    """
+    session_dir = TEST_OUTPUTS_DIR / session_id
+
+    if not session_dir.exists():
+        raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+
+    artifacts = []
+    html_report = None
+    json_report = None
+    playwright_code = None
+    screenshots = []
+    video = None
+
+    # Walk through session directory
+    for item in session_dir.rglob("*"):
+        if item.is_file():
+            rel_path = item.relative_to(session_dir)
+            artifact_url = f"/artifacts/{session_id}/file/{rel_path.as_posix()}"
+
+            artifact = ArtifactInfo(
+                name=item.name,
+                type="file",
+                path=str(rel_path),
+                size=item.stat().st_size,
+                url=artifact_url,
+            )
+            artifacts.append(artifact)
+
+            # Categorize artifacts
+            if item.name == "report.html":
+                html_report = artifact_url
+            elif item.name == "report.json":
+                json_report = artifact_url
+            elif item.suffix == ".py" and item.name.startswith("test_"):
+                playwright_code = artifact_url
+            elif item.suffix == ".png":
+                screenshots.append(artifact_url)
+            elif item.suffix == ".gif":
+                video = artifact_url
+
+    return SessionArtifacts(
+        session_id=session_id,
+        output_directory=str(session_dir),
+        artifacts=artifacts,
+        html_report=html_report,
+        json_report=json_report,
+        playwright_code=playwright_code,
+        screenshots=sorted(screenshots),
+        video=video,
+    )
+
+
+@app.get("/artifacts/{session_id}/file/{file_path:path}")
+async def get_artifact_file(session_id: str, file_path: str):
+    """
+    Serve a specific artifact file.
+    """
+    file_full_path = TEST_OUTPUTS_DIR / session_id / file_path
+
+    if not file_full_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    if not file_full_path.is_file():
+        raise HTTPException(status_code=400, detail="Not a file")
+
+    # Determine media type
+    suffix = file_full_path.suffix.lower()
+    media_types = {
+        ".html": "text/html",
+        ".json": "application/json",
+        ".py": "text/x-python",
+        ".png": "image/png",
+        ".gif": "image/gif",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".md": "text/markdown",
+        ".yaml": "text/yaml",
+        ".yml": "text/yaml",
+        ".feature": "text/plain",
+    }
+    media_type = media_types.get(suffix, "application/octet-stream")
+
+    return FileResponse(
+        path=file_full_path,
+        media_type=media_type,
+        filename=file_full_path.name,
+    )
+
+
+@app.get("/artifacts/{session_id}/code")
+async def get_playwright_code(session_id: str):
+    """
+    Get the generated Playwright code content.
+    """
+    session_dir = TEST_OUTPUTS_DIR / session_id / "tests"
+
+    if not session_dir.exists():
+        raise HTTPException(status_code=404, detail="Tests directory not found")
+
+    # Find the test file
+    test_files = list(session_dir.glob("test_*.py"))
+    if not test_files:
+        raise HTTPException(status_code=404, detail="No test file found")
+
+    test_file = test_files[0]
+    content = test_file.read_text(encoding="utf-8")
+
+    return {
+        "filename": test_file.name,
+        "content": content,
+        "path": str(test_file.relative_to(TEST_OUTPUTS_DIR)),
+    }
+
+
+@app.get("/sessions")
+async def list_sessions():
+    """
+    List all available test sessions.
+    """
+    if not TEST_OUTPUTS_DIR.exists():
+        return {"sessions": []}
+
+    sessions = []
+    for item in TEST_OUTPUTS_DIR.iterdir():
+        if item.is_dir():
+            # Get session info
+            report_json = item / "reports" / "report.json"
+            session_info = {
+                "session_id": item.name,
+                "created_at": item.stat().st_mtime,
+                "has_report": report_json.exists(),
+            }
+            sessions.append(session_info)
+
+    # Sort by creation time (newest first)
+    sessions.sort(key=lambda x: x["created_at"], reverse=True)
+
+    return {"sessions": sessions}
 
 
 if __name__ == "__main__":

@@ -205,14 +205,14 @@ Configurable via `OutputConfig` class in `models/output_config.py`.
 - [x] Running state indicator with progress bar
 - [x] Output directory display
 
-### Phase 3: Artifacts Viewer
-- [ ] Screenshot gallery with lightbox
-- [ ] Generated code viewer with syntax highlighting
-- [ ] HTML report embed/link
-- [ ] Download buttons for all artifacts
+### Phase 3: Artifacts Viewer - COMPLETED
+- [x] Screenshot gallery with lightbox
+- [x] Generated code viewer with syntax highlighting
+- [x] HTML report embed/link
+- [x] Download buttons for all artifacts
+- [x] GIF/Video playback in Reports tab
 
 ### Phase 4: Advanced Features
-- [ ] Video playback (GIF)
 - [ ] Comparison views
 - [ ] History/session browser
 - [ ] Re-run capabilities
@@ -282,6 +282,47 @@ Configurable via `OutputConfig` class in `models/output_config.py`.
    - Total actions count
    - Output directory path (when available)
 
+### v1.3.0 - Artifacts Viewer (Phase 3)
+**Date:** 2026-01-09
+
+**Files Changed:**
+- `components/ArtifactsViewer.tsx` - New component for viewing generated artifacts
+- `services/geminiService.ts` - Added artifacts API functions
+- `backend/main.py` - Added artifacts endpoints
+- `backend/advanced_browser_services/streaming.py` - Added session_id to done event
+- `backend/advanced_browser_services/streaming_runner.py` - Emit done event with output_directory
+- `apps/UIAutomator.tsx` - Integrated ArtifactsViewer component
+
+**New Features:**
+1. **Screenshot Gallery**
+   - Grid layout of step screenshots
+   - Lightbox modal with keyboard navigation (arrow keys, escape)
+   - Step number overlay on each thumbnail
+
+2. **Code Viewer**
+   - Syntax-highlighted Playwright Python code
+   - Copy to clipboard button
+   - Download code file button
+   - Filename display in header
+
+3. **Reports Tab**
+   - Embedded HTML report iframe
+   - Open in new tab button
+   - JSON report download
+   - GIF recording playback
+
+4. **Downloads Tab**
+   - Full list of all artifacts
+   - File type icons and colors
+   - File size display
+   - Individual download buttons
+
+**Backend Endpoints Added:**
+- `GET /artifacts/{session_id}` - List all session artifacts
+- `GET /artifacts/{session_id}/file/{path}` - Serve individual artifact files
+- `GET /artifacts/{session_id}/code` - Get Playwright code content
+- `GET /sessions` - List all test sessions
+
 ---
 
 ## 8. File Locations
@@ -290,7 +331,10 @@ Configurable via `OutputConfig` class in `models/output_config.py`.
 - Models: `backend/ui_testing_agent/models/`
 - Generators: `backend/ui_testing_agent/generators/`
 - Streaming: `backend/advanced_browser_services/streaming_runner.py`
+- Streaming Events: `backend/advanced_browser_services/streaming.py`
+- Main API: `backend/main.py`
 - Frontend Service: `services/geminiService.ts`
 - Frontend UI: `apps/UIAutomator.tsx`
 - Log Viewer: `components/LogViewer.tsx`
 - Results Panel: `components/TestResultsPanel.tsx`
+- Artifacts Viewer: `components/ArtifactsViewer.tsx`

@@ -130,6 +130,12 @@ class StreamingAgentRunner:
 
             final_result = history.final_result() or "Task completed"
 
+            # Emit done event with session info
+            session.emit_done(
+                summary=final_result,
+                success=True
+            )
+
             return {
                 "success": True,
                 "summary": final_result,
@@ -139,6 +145,10 @@ class StreamingAgentRunner:
 
         except Exception as e:
             session.emit_error(f"Task failed: {str(e)}")
+            session.emit_done(
+                summary=f"Error: {str(e)}",
+                success=False
+            )
             return {
                 "success": False,
                 "summary": f"Error: {str(e)}",
@@ -319,15 +329,26 @@ class StreamingAgentRunner:
             session.emit_info(f"Artifacts generated in: {result_session.output_directory}")
             if result_session.html_report_path:
                 session.emit_success(f"Report available: {result_session.html_report_path}")
-            
+
+            # Emit done event with output directory for artifact loading
+            session.emit_done(
+                summary="UI Testing Agent finished successfully",
+                success=True,
+                extra_data={"output_directory": result_session.output_directory}
+            )
+
             return {
                 "success": True,
                 "summary": "UI Testing Agent finished successfully",
                 "output_directory": result_session.output_directory
             }
-            
+
         except Exception as e:
             session.emit_error(f"UI Testing Agent failed: {str(e)}")
+            session.emit_done(
+                summary=f"UI Testing Agent failed: {str(e)}",
+                success=False
+            )
             return {
                 "success": False,
                 "error": str(e)

@@ -140,13 +140,16 @@ class StreamingSession:
             {"url": url, "title": title}
         )
 
-    def emit_done(self, summary: str, success: bool = True):
+    def emit_done(self, summary: str, success: bool = True, extra_data: Optional[Dict[str, Any]] = None):
         """Emit task completion event."""
+        data = {"success": success, "total_steps": self._step_count, "session_id": self.session_id}
+        if extra_data:
+            data.update(extra_data)
         self.emit(
             EventType.DONE,
             summary,
             LogLevel.SUCCESS if success else LogLevel.ERROR,
-            {"success": success, "total_steps": self._step_count}
+            data
         )
         self._is_running = False
 

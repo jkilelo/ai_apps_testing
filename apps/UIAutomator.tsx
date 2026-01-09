@@ -10,6 +10,7 @@ import {
 } from '../services/geminiService';
 import LogViewer from '../components/LogViewer';
 import TestResultsPanel from '../components/TestResultsPanel';
+import ArtifactsViewer from '../components/ArtifactsViewer';
 import { ExecutionLog, AgentMode, EventType, LogLevel } from '../types';
 
 const MODES: { id: AgentMode; name: string; icon: string; description: string }[] = [
@@ -478,6 +479,14 @@ const UIAutomator: React.FC = () => {
         currentStep={currentStep}
         maxSteps={30}
       />
+
+      {/* Artifacts Viewer - show after task completion */}
+      {result && (
+        <ArtifactsViewer
+          sessionId={result.data?.session_id as string | null}
+          outputDirectory={result.data?.output_directory as string | undefined}
+        />
+      )}
     </div>
   );
 };
