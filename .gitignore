@@ -54,3 +54,30 @@ Thumbs.db
 *.sw?
 *.log
 logs
+
+# Test outputs & reports
+test_outputs/
+**/test_outputs/
+reports/
+**/reports/
+screenshots/
+**/screenshots/
+
+# Agent artifacts
+*.gif
+agent_history.gif
+**/agent_history.gif
+raw_history.json
+**/raw_history.json
+todo.md
+
+# Temporary files
+nul
+push_out.txt
+*.tmp
+
+# Claude Code
+.claude/
+
+# Local test scripts (optional - remove if you want to commit them)
+backend/test_*.py
