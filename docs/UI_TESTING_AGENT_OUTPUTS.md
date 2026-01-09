@@ -212,8 +212,8 @@ Configurable via `OutputConfig` class in `models/output_config.py`.
 - [x] Download buttons for all artifacts
 - [x] GIF/Video playback in Reports tab
 
-### Phase 4: Advanced Features - IN PROGRESS
-- [ ] Comparison views
+### Phase 4: Advanced Features - COMPLETED
+- [x] Comparison views
 - [x] History/session browser
 - [x] Re-run capabilities
 
@@ -346,9 +346,15 @@ Configurable via `OutputConfig` class in `models/output_config.py`.
    - Re-run button on sessions with stored tasks
    - Loads task back into input and switches to basic mode
 
-3. **UI Header**
+3. **Session Comparison**
+   - Compare two sessions side by side
+   - Summary tab with artifact counts and stats
+   - Screenshots tab with side-by-side image comparison
+   - Session selector dropdowns
+
+4. **UI Header**
    - Added "UI Automator" title
-   - Toggle button for session history panel
+   - Toggle buttons for history and comparison panels
 
 ---
 
@@ -366,3 +372,4 @@ Configurable via `OutputConfig` class in `models/output_config.py`.
 - Results Panel: `components/TestResultsPanel.tsx`
 - Artifacts Viewer: `components/ArtifactsViewer.tsx`
 - Session Browser: `components/SessionBrowser.tsx`
+- Session Comparison: `components/SessionComparison.tsx`
