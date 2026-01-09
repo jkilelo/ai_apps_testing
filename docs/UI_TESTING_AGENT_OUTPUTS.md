@@ -188,18 +188,22 @@ Configurable via `OutputConfig` class in `models/output_config.py`.
 
 ## 6. Implementation Phases
 
-### Phase 1: Enhanced Streaming Terminal (Current)
+### Phase 1: Enhanced Streaming Terminal - COMPLETED
 - [x] Basic log streaming
-- [ ] Color-coded message types (Goal, Action, Result, Error)
-- [ ] Step progress indicator
-- [ ] Collapsible step sections
-- [ ] Auto-scroll with pause on hover
+- [x] Color-coded message types (Goal, Action, Result, Error)
+- [x] Step progress indicator (gradient progress bar)
+- [x] Collapsible step sections (Grouped view mode)
+- [x] Auto-scroll with pause on hover
+- [x] View mode toggle (Stream / Grouped)
+- [x] Footer stats (events, steps, errors, success count)
 
-### Phase 2: Test Results Panel
-- [ ] Summary cards (passed/failed/rate)
-- [ ] Scenario list with expand/collapse
-- [ ] Step-by-step breakdown
-- [ ] Failure highlighting
+### Phase 2: Test Results Panel - COMPLETED
+- [x] Summary cards (Steps, Passed, Failed, Pass Rate)
+- [x] Step list with expand/collapse
+- [x] Action breakdown per step
+- [x] Failure highlighting (red background, error messages)
+- [x] Running state indicator with progress bar
+- [x] Output directory display
 
 ### Phase 3: Artifacts Viewer
 - [ ] Screenshot gallery with lightbox
@@ -215,7 +219,72 @@ Configurable via `OutputConfig` class in `models/output_config.py`.
 
 ---
 
-## File Locations
+## 7. Changelog
+
+### v1.1.0 - Enhanced Streaming Terminal (Phase 1)
+**Date:** 2026-01-09
+
+**Files Changed:**
+- `types.ts` - Added `LogLevel`, `EventType` types; Extended `ExecutionLog` interface
+- `components/LogViewer.tsx` - Complete rewrite with enhanced features
+- `apps/UIAutomator.tsx` - Updated event handling to pass full metadata
+
+**New Features:**
+1. **Color-Coded Event Types** with icons:
+   | Event | Color | Icon | Label |
+   |-------|-------|------|-------|
+   | step_start | Purple | flag | STEP |
+   | step_thinking | Cyan | brain | GOAL |
+   | step_action | Amber | bolt | ACTION |
+   | step_result | Green | check-circle | RESULT |
+   | browser_state | Blue | globe | BROWSER |
+   | progress | Gray | spinner | INFO |
+   | error | Red | exclamation-triangle | ERROR |
+   | done | Green | trophy | DONE |
+
+2. **Progress Bar** - Gradient bar (blue→purple) showing step progress
+3. **View Modes** - Toggle between Stream (real-time) and Grouped (by step)
+4. **Auto-Scroll Control** - Toggle button, auto-pauses when user scrolls up
+5. **Footer Stats** - Total events, steps, error count, success count
+6. **Step Counter** - Shows "Step X/Y" in terminal header
+
+### v1.2.0 - Test Results Panel (Phase 2)
+**Date:** 2026-01-09
+
+**Files Changed:**
+- `components/TestResultsPanel.tsx` - New component for displaying test results
+- `apps/UIAutomator.tsx` - Integrated TestResultsPanel, removed old renderResult
+
+**New Features:**
+1. **Summary Cards** - Four stat cards showing:
+   - Total Steps (blue)
+   - Passed Steps (green)
+   - Failed Steps (red)
+   - Pass Rate % (color-coded by threshold)
+
+2. **Running State Indicator**
+   - "Running..." badge when task is in progress
+   - Progress bar showing current step / max steps
+   - "Completed" or "Failed" badge when done
+
+3. **Step Breakdown List**
+   - Collapsible step entries
+   - Step number and goal display
+   - Action count per step
+   - Pass/fail icon for each step
+
+4. **Expanded Step Details**
+   - List of actions with bolt icons
+   - Error messages highlighted in red box
+   - Failure steps have pink background
+
+5. **Footer Stats**
+   - Total actions count
+   - Output directory path (when available)
+
+---
+
+## 8. File Locations
 
 - Backend Service: `backend/ui_testing_agent/service.py`
 - Models: `backend/ui_testing_agent/models/`
@@ -223,3 +292,5 @@ Configurable via `OutputConfig` class in `models/output_config.py`.
 - Streaming: `backend/advanced_browser_services/streaming_runner.py`
 - Frontend Service: `services/geminiService.ts`
 - Frontend UI: `apps/UIAutomator.tsx`
+- Log Viewer: `components/LogViewer.tsx`
+- Results Panel: `components/TestResultsPanel.tsx`

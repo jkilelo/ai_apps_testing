@@ -9,6 +9,7 @@ import {
   StreamingEvent,
 } from '../services/geminiService';
 import LogViewer from '../components/LogViewer';
+import TestResultsPanel from '../components/TestResultsPanel';
 import { ExecutionLog, AgentMode, EventType, LogLevel } from '../types';
 
 const MODES: { id: AgentMode; name: string; icon: string; description: string }[] = [
@@ -403,41 +404,6 @@ const UIAutomator: React.FC = () => {
     }
   };
 
-  const renderResult = () => {
-    if (!result) return null;
-
-    return (
-      <div className={`${result.success ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'} border p-6 rounded-xl animate-in fade-in slide-in-from-bottom-4`}>
-        <h3 className={`${result.success ? 'text-emerald-900' : 'text-red-900'} font-semibold mb-4 flex items-center gap-2`}>
-          <i className={`fas ${result.success ? 'fa-check-circle' : 'fa-times-circle'}`}></i>
-          {result.success ? 'Task Completed' : 'Task Failed'}
-        </h3>
-
-        <p className={`${result.success ? 'text-emerald-800' : 'text-red-800'} text-sm leading-relaxed`}>{result.summary}</p>
-
-        {result.data && Object.keys(result.data).length > 0 && (
-          <details className="mt-3">
-            <summary className={`text-xs ${result.success ? 'text-emerald-600' : 'text-red-600'} cursor-pointer hover:opacity-80`}>
-              View Details
-            </summary>
-            <pre className="mt-2 p-3 bg-white/50 rounded text-xs overflow-auto max-h-48">
-              {JSON.stringify(result.data, null, 2)}
-            </pre>
-          </details>
-        )}
-
-        <div className="mt-4 pt-4 border-t border-opacity-50 flex gap-4">
-          <div className="bg-white/50 px-3 py-1.5 rounded text-[10px] font-mono">
-            MODE: {mode.toUpperCase()}
-          </div>
-          <div className="bg-white/50 px-3 py-1.5 rounded text-[10px] font-mono">
-            STEPS: {currentStep}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="space-y-6">
       {/* Mode Selector */}
@@ -505,7 +471,13 @@ const UIAutomator: React.FC = () => {
 
       <LogViewer logs={logs} maxSteps={30} currentStep={currentStep} />
 
-      {renderResult()}
+      <TestResultsPanel
+        logs={logs}
+        result={result}
+        isRunning={loading}
+        currentStep={currentStep}
+        maxSteps={30}
+      />
     </div>
   );
 };
