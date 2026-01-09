@@ -9,7 +9,7 @@ import {
   StreamingEvent,
 } from '../services/geminiService';
 import LogViewer from '../components/LogViewer';
-import { ExecutionLog, AgentMode } from '../types';
+import { ExecutionLog, AgentMode, EventType, LogLevel } from '../types';
 
 const MODES: { id: AgentMode; name: string; icon: string; description: string }[] = [
   { id: 'basic', name: 'UI Agent (Backend)', icon: 'fa-robot', description: 'Full UI Testing Agent with artifacts & reporting' },
@@ -59,56 +59,69 @@ const UIAutomator: React.FC = () => {
     };
   }, []);
 
-  const addLog = (message: string, level: ExecutionLog['level'] = 'info') => {
+  const addLog = (
+    message: string,
+    level: LogLevel = 'info',
+    eventType?: EventType,
+    step?: number,
+    data?: Record<string, unknown>
+  ) => {
     setLogs(prev => [...prev, {
       timestamp: new Date().toLocaleTimeString(),
       level,
-      message
+      message,
+      eventType,
+      step,
+      data
     }]);
   };
 
   const handleStreamEvent = (event: StreamingEvent) => {
-    // Map streaming event level to ExecutionLog level
-    const levelMap: Record<string, ExecutionLog['level']> = {
+    // Map streaming event level to LogLevel
+    const levelMap: Record<string, LogLevel> = {
       'info': 'info',
       'success': 'success',
       'warn': 'warn',
       'error': 'error',
-      'debug': 'info',
+      'debug': 'debug',
     };
 
     const level = levelMap[event.level] || 'info';
+    const eventType = event.type as EventType;
 
     // Update step counter
     if (event.step !== undefined) {
       setCurrentStep(event.step);
     }
 
-    // Add log entry based on event type
+    // Add log entry based on event type with full metadata
     switch (event.type) {
       case 'step_start':
-        addLog(`--- Step ${event.step} ---`, 'info');
+        addLog(`Step ${event.step} started`, 'info', 'step_start', event.step, event.data);
         break;
       case 'step_thinking':
-        addLog(`Thinking: ${event.message}`, 'info');
+        addLog(event.message, 'info', 'step_thinking', event.step, event.data);
         break;
       case 'step_action':
-        addLog(`Action: ${event.message}`, 'info');
+        addLog(event.message, 'info', 'step_action', event.step, event.data);
+        break;
+      case 'step_result':
+        addLog(event.message, level, 'step_result', event.step, event.data);
         break;
       case 'browser_state':
-        addLog(`Browser: ${event.message}`, 'info');
+        addLog(event.message, 'info', 'browser_state', event.step, event.data);
         if (event.data?.url) {
-          addLog(`URL: ${event.data.url}`, 'info');
+          addLog(`${event.data.url}`, 'info', 'browser_state', event.step);
         }
         break;
       case 'progress':
-        addLog(event.message, level);
+        addLog(event.message, level, 'progress', event.step, event.data);
         break;
       case 'error':
-        addLog(event.message, 'error');
+        addLog(event.message, 'error', 'error', event.step, event.data);
         break;
       case 'done':
-        addLog(event.message, event.data?.success ? 'success' : 'error');
+        addLog(event.message, event.data?.success ? 'success' : 'error', 'done', event.step, event.data);
         setResult({
           success: event.data?.success as boolean ?? true,
           summary: event.message,
@@ -117,12 +130,12 @@ const UIAutomator: React.FC = () => {
         setLoading(false);
         break;
       default:
-        addLog(event.message, level);
+        addLog(event.message, level, eventType, event.step, event.data);
     }
   };
 
   const handleError = (error: Error) => {
-    addLog(`Error: ${error.message}`, 'error');
+    addLog(`Error: ${error.message}`, 'error', 'error');
     setLoading(false);
   };
 
@@ -135,7 +148,7 @@ const UIAutomator: React.FC = () => {
     if (cleanupRef.current) {
       cleanupRef.current();
       cleanupRef.current = null;
-      addLog('Task cancelled by user', 'warn');
+      addLog('Task cancelled by user', 'warn', 'system');
       setLoading(false);
     }
   };
@@ -151,14 +164,14 @@ const UIAutomator: React.FC = () => {
     setResult(null);
     setCurrentStep(0);
 
-    addLog(`Starting ${MODES.find(m => m.id === mode)?.name} task...`);
+    addLog(`Starting ${MODES.find(m => m.id === mode)?.name} task...`, 'info', 'system');
 
     let cleanup: (() => void) | null = null;
 
     switch (mode) {
       case 'basic':
         if (!prompt.trim()) {
-          addLog('Please enter a task instruction', 'error');
+          addLog('Please enter a task instruction', 'error', 'system');
           setLoading(false);
           return;
         }
@@ -172,7 +185,7 @@ const UIAutomator: React.FC = () => {
 
       case 'extract':
         if (!extractUrl.trim()) {
-          addLog('Please enter a URL', 'error');
+          addLog('Please enter a URL', 'error', 'system');
           setLoading(false);
           return;
         }
@@ -180,7 +193,7 @@ const UIAutomator: React.FC = () => {
         try {
           schema = JSON.parse(extractSchema);
         } catch {
-          addLog('Invalid JSON schema', 'error');
+          addLog('Invalid JSON schema', 'error', 'system');
           setLoading(false);
           return;
         }
@@ -194,7 +207,7 @@ const UIAutomator: React.FC = () => {
 
       case 'research':
         if (!researchTopic_.trim()) {
-          addLog('Please enter a research topic', 'error');
+          addLog('Please enter a research topic', 'error', 'system');
           setLoading(false);
           return;
         }
@@ -208,7 +221,7 @@ const UIAutomator: React.FC = () => {
 
       case 'compare-products':
         if (!products.trim()) {
-          addLog('Please enter products to compare', 'error');
+          addLog('Please enter products to compare', 'error', 'system');
           setLoading(false);
           return;
         }
@@ -224,7 +237,7 @@ const UIAutomator: React.FC = () => {
 
       case 'compare-pages':
         if (!pageUrls.trim() || !comparisonCriteria.trim()) {
-          addLog('Please enter URLs and comparison criteria', 'error');
+          addLog('Please enter URLs and comparison criteria', 'error', 'system');
           setLoading(false);
           return;
         }
@@ -238,7 +251,7 @@ const UIAutomator: React.FC = () => {
         break;
 
       default:
-        addLog('Unknown mode', 'error');
+        addLog('Unknown mode', 'error', 'system');
         setLoading(false);
         return;
     }
@@ -490,7 +503,7 @@ const UIAutomator: React.FC = () => {
         </div>
       </div>
 
-      <LogViewer logs={logs} />
+      <LogViewer logs={logs} maxSteps={30} currentStep={currentStep} />
 
       {renderResult()}
     </div>

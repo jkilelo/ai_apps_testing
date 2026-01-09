@@ -2,8 +2,6 @@
 import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import UIAutomator from './apps/UIAutomator';
-import DataProfiler from './apps/DataProfiler';
-import QualityChecker from './apps/QualityChecker';
 import { AppId, AppMetadata } from './types';
 
 const APPS: AppMetadata[] = [
@@ -12,18 +10,6 @@ const APPS: AppMetadata[] = [
     name: 'AI UI Automator',
     icon: 'fa-globe',
     description: 'Browser automation powered by Gemini & browser-use'
-  },
-  {
-    id: AppId.DATA_PROFILER,
-    name: 'AI Data Profiler',
-    icon: 'fa-chart-pie',
-    description: 'Deep data analysis and profiling engine'
-  },
-  {
-    id: AppId.QUALITY_CHECKER,
-    name: 'Quality Checker',
-    icon: 'fa-clipboard-check',
-    description: 'Rule-based data validation and auditing'
   },
 ];
 
@@ -34,10 +20,6 @@ const App: React.FC = () => {
     switch (activeAppId) {
       case AppId.UI_AUTOMATOR:
         return <UIAutomator />;
-      case AppId.DATA_PROFILER:
-        return <DataProfiler />;
-      case AppId.QUALITY_CHECKER:
-        return <QualityChecker />;
       default:
         return <UIAutomator />;
     }

@@ -1,8 +1,6 @@
 
 export enum AppId {
   UI_AUTOMATOR = 'ui-automator',
-  DATA_PROFILER = 'data-profiler',
-  QUALITY_CHECKER = 'quality-checker',
   RESULTS_GALLERY = 'results-gallery'
 }
 
@@ -13,10 +11,16 @@ export interface AppMetadata {
   description: string;
 }
 
+export type LogLevel = 'info' | 'warn' | 'error' | 'success' | 'debug';
+export type EventType = 'step_start' | 'step_thinking' | 'step_action' | 'step_result' | 'browser_state' | 'progress' | 'error' | 'done' | 'system';
+
 export interface ExecutionLog {
   timestamp: string;
-  level: 'info' | 'warn' | 'error' | 'success';
+  level: LogLevel;
   message: string;
+  eventType?: EventType;
+  step?: number;
+  data?: Record<string, unknown>;
 }
 
 export interface AutomationResult {
@@ -26,17 +30,6 @@ export interface AutomationResult {
   screenshotUrl?: string;
 }
 
-export interface DataProfileResult {
-  fileName: string;
-  stats: {
-    rows: number;
-    columns: number;
-    missingValues: number;
-    duplicateRows: number;
-  };
-  insights: string[];
-  anomalies: string[];
-}
 
 
 // ============== Advanced Browser Service Types ==============
