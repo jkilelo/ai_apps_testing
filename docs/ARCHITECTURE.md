@@ -199,6 +199,7 @@
 | `SessionComparison.tsx` | Compare two test sessions |
 | `Toast.tsx` | Notification toasts |
 | `Sidebar.tsx` | Navigation sidebar |
+| `geminiService.ts` | API client (REST + SSE connections) |
 
 ---
 
@@ -241,6 +242,8 @@
     +-------------------------------+
     |                               |
     | - create_session()            |
+    | - get_session()               |
+    | - cleanup_session()           |
     | - run_basic_task()            |
     | - run_ui_testing_agent_task() |
     | - run_data_extraction()       |
@@ -299,11 +302,13 @@
 | StreamingAgentRunner | `streaming_runner.py` | Task execution with SSE |
 | **LLMFactory** | `llm_factory.py` | **LLM instantiation (single source of truth)** |
 | **BrowserFactory** | `browser_factory.py` | **Browser instantiation (single source of truth)** |
-| UITestingService | `service.py` | Artifact generation |
+| UITestingService | `service.py` | Artifact generation orchestration |
 | ExplorerAgent | `explorer_agent.py` | QA-focused browser-use wrapper |
-| StepProcessor | `step_processor.py` | History processing |
+| StepProcessor | `step_processor.py` | AgentHistoryList processing |
+| ActionDataExtractor | `action_data_extractor.py` | Action data extraction |
 | ReportGenerator | `report_generator.py` | HTML/JSON report generation |
-| PlaywrightGenerator | `playwright_generator.py` | Test code generation |
+| PlaywrightGenerator | `playwright_generator.py` | Playwright test code generation |
+| TestCaseGenerator | `test_case_generator.py` | Test case generation |
 
 ---
 
@@ -735,6 +740,9 @@ ai_apps_testing/
 │   ├── Sidebar.tsx                 # Navigation
 │   └── Toast.tsx                   # Notifications
 │
+├── services/
+│   └── geminiService.ts            # API client (REST + SSE)
+│
 ├── backend/
 │   ├── main.py                     # FastAPI application
 │   │
@@ -752,14 +760,19 @@ ai_apps_testing/
 │       │   ├── browser_factory.py  # BrowserFactory (SINGLE SOURCE OF TRUTH)
 │       │   ├── explorer_agent.py   # ExplorerAgent
 │       │   ├── step_processor.py   # History processor
-│       │   └── selector_extractor.py
+│       │   ├── selector_extractor.py
+│       │   └── action_data_extractor.py  # Action data extraction
 │       ├── generators/
 │       │   ├── playwright_generator.py
+│       │   ├── verified_playwright_generator.py  # Alternative impl
+│       │   ├── test_case_generator.py  # Test case generation
 │       │   └── report_generator.py
 │       ├── models/
 │       │   ├── output_config.py
 │       │   ├── processed_step.py
+│       │   ├── processed_action.py  # Action data model
 │       │   ├── test_session.py
+│       │   ├── test_scenario.py     # Scenario data model
 │       │   └── selector_info.py
 │       └── prompts/
 │           └── qa_engineer_prompt.py
@@ -780,6 +793,7 @@ ai_apps_testing/
 └── docs/
     ├── ARCHITECTURE.md             # This document
     ├── ADVANCED_BROWSER_SERVICES.md
+    ├── BROWSER_AND_LLM_CONNECTIONS.md
     └── CDP_GRACEFUL_FALLBACK_PLAN.md
 ```
 
