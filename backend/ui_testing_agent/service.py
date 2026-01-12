@@ -126,9 +126,15 @@ class UITestingService:
 
         # Generate Playwright code
         if self.output_config.generate_playwright_code:
-            playwright_path = self._generate_playwright(session, output_dir)
-            session.playwright_code_path = playwright_path
-            session.output_filename = os.path.basename(playwright_path)
+            try:
+                playwright_path = self._generate_playwright(session, output_dir)
+                session.playwright_code_path = playwright_path
+                session.output_filename = os.path.basename(playwright_path)
+                print(f"[UITestingService] Generated Playwright code: {playwright_path}")
+            except Exception as e:
+                print(f"[UITestingService] ERROR generating Playwright code: {e}")
+                import traceback
+                traceback.print_exc()
 
         # Generate test cases
         if self.output_config.generate_test_cases:

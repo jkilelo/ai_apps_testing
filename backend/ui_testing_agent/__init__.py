@@ -59,6 +59,12 @@ from .models.selector_info import SelectorInfo
 
 # Core components
 from .core.explorer_agent import ExplorerAgent, DEFAULT_MODEL
+from .core.browser_factory import (
+    BrowserFactory,
+    BrowserResult,
+    BrowserConfig,
+    BrowserInitializationError,
+)
 
 # Generators
 from .generators.playwright_generator import PlaywrightGenerator
@@ -85,6 +91,12 @@ __all__ = [
 
     # Core components
     "ExplorerAgent",
+
+    # Browser Factory (Single Source of Truth)
+    "BrowserFactory",
+    "BrowserResult",
+    "BrowserConfig",
+    "BrowserInitializationError",
 
     # Generators
     "PlaywrightGenerator",

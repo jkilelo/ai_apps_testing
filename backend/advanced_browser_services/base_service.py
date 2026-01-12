@@ -3,13 +3,24 @@ Base Service Configuration
 
 Provides core configuration for all advanced browser services including
 LLM initialization and browser configuration.
+
+NOTE: Browser instantiation should use BrowserFactory from ui_testing_agent.core.
+The BrowserConfig class here is DEPRECATED - use BrowserFactory.BrowserConfig instead.
 """
 
 import os
+import warnings
 from dataclasses import dataclass, field
 from typing import Optional, Any, Dict
 from dotenv import load_dotenv
-from browser_use import ChatGoogle, Browser
+from browser_use import ChatGoogle
+
+# Import BrowserFactory as the single source of truth
+from ui_testing_agent.core.browser_factory import (
+    BrowserFactory,
+    BrowserResult,
+    BrowserConfig as FactoryBrowserConfig,
+)
 
 load_dotenv()
 
@@ -41,17 +52,10 @@ def get_gemini_llm(model: str = DEFAULT_MODEL, temperature: float = 0.7):
 @dataclass
 class BrowserConfig:
     """
-    Configuration class for browser sessions.
+    DEPRECATED: Use BrowserFactory from ui_testing_agent.core instead.
 
-    Attributes:
-        headless: Run browser without visible window
-        disable_security: Disable browser security features (use with caution)
-        args: Additional command-line arguments for Chromium
-        window_width: Browser window width in pixels
-        window_height: Browser window height in pixels
-        user_data_dir: Path to browser user data directory for persistent sessions
-        allowed_domains: List of allowed domains (restricts navigation)
-        profile_path: Path to browser profile directory for persistent sessions
+    This class is kept for backwards compatibility but will be removed in a future version.
+    All browser instantiation should go through BrowserFactory.create().
     """
     headless: bool = False
     disable_security: bool = False
@@ -62,28 +66,39 @@ class BrowserConfig:
     allowed_domains: Optional[list] = None
     profile_path: Optional[str] = None
 
-    def create_browser(self) -> Browser:
-        """Create a Browser instance with the configured settings."""
-        kwargs: Dict[str, Any] = {
-            "headless": self.headless,
-            "disable_security": self.disable_security,
-        }
+    async def create_browser_async(self) -> BrowserResult:
+        """
+        Create a browser using BrowserFactory (single source of truth).
 
-        if self.args:
-            kwargs["args"] = self.args
+        Returns:
+            BrowserResult from BrowserFactory
+        """
+        warnings.warn(
+            "BrowserConfig.create_browser_async() is deprecated. "
+            "Use BrowserFactory.create() directly instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        config = FactoryBrowserConfig(
+            headless=self.headless,
+            disable_security=self.disable_security,
+            extra_args=self.args,
+            window_width=self.window_width,
+            window_height=self.window_height,
+        )
+        return await BrowserFactory.create(config=config)
 
-        if self.user_data_dir:
-            kwargs["user_data_dir"] = self.user_data_dir
-        elif self.profile_path:
-            kwargs["user_data_dir"] = self.profile_path
+    def create_browser(self):
+        """
+        DEPRECATED: This synchronous method cannot be used with BrowserFactory.
 
-        if self.allowed_domains:
-            kwargs["allowed_domains"] = self.allowed_domains
-
-        if self.window_width and self.window_height:
-            kwargs["viewport"] = {"width": self.window_width, "height": self.window_height}
-
-        return Browser(**kwargs)
+        Use create_browser_async() or BrowserFactory.create() instead.
+        """
+        raise DeprecationWarning(
+            "BrowserConfig.create_browser() is deprecated and no longer works. "
+            "Use 'await BrowserFactory.create()' instead. "
+            "Browser instantiation must go through BrowserFactory (single source of truth)."
+        )
 
 
 class BaseAgentService:
@@ -91,13 +106,14 @@ class BaseAgentService:
     Base class for all advanced agent services.
 
     Provides common functionality for browser automation agents.
+    Uses BrowserFactory as the single source of truth for browser instantiation.
     """
 
     def __init__(
         self,
         model: str = DEFAULT_MODEL,
         temperature: float = 0.7,
-        browser_config: Optional[BrowserConfig] = None,
+        headless: bool = False,
     ):
         """
         Initialize the base agent service.
@@ -105,23 +121,25 @@ class BaseAgentService:
         Args:
             model: Gemini model to use
             temperature: LLM temperature setting
-            browser_config: Browser configuration options
+            headless: Run browser without visible window
         """
         self.llm = get_gemini_llm(model=model, temperature=temperature)
-        self.browser_config = browser_config or BrowserConfig()
-        self.browser: Optional[Any] = None
+        self.headless = headless
+        self._browser_result: Optional[BrowserResult] = None
 
-    async def _ensure_browser(self) -> Any:
-        """Ensure browser session is initialized."""
-        if self.browser is None:
-            self.browser = self.browser_config.create_browser()
-        return self.browser
+    async def _ensure_browser(self) -> BrowserResult:
+        """
+        Ensure browser is initialized using BrowserFactory.
+
+        Returns:
+            BrowserResult from BrowserFactory
+        """
+        if self._browser_result is None:
+            self._browser_result = await BrowserFactory.create(headless=self.headless)
+        return self._browser_result
 
     async def close(self):
-        """Clean up browser resources."""
-        if self.browser:
-            try:
-                await self.browser.close()
-            except Exception:
-                pass  # Ignore cleanup errors
-            self.browser = None
+        """Clean up browser resources using BrowserFactory."""
+        if self._browser_result:
+            await BrowserFactory.cleanup(self._browser_result)
+            self._browser_result = None

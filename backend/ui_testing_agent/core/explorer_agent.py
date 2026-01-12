@@ -20,11 +20,10 @@ if os.getenv("GEMINI_API_KEY") and not os.getenv("GOOGLE_API_KEY"):
     os.environ["GOOGLE_API_KEY"] = os.getenv("GEMINI_API_KEY")
 
 from browser_use import Agent
-from browser_use.browser.session import BrowserSession
-from browser_use.browser.profile import BrowserProfile
 from browser_use.agent.views import AgentHistoryList
 
 from ..models.output_config import OutputConfig
+from .browser_factory import BrowserFactory, BrowserResult
 from ..models.processed_step import ProcessedStep
 from ..models.test_session import TestSession
 from .step_processor import StepProcessor
@@ -97,7 +96,7 @@ class ExplorerAgent:
         self.done_callback = done_callback
 
         self.llm = get_llm(model=model, temperature=temperature)
-        self.browser_session: Optional[BrowserSession] = None
+        self._browser_result: Optional[BrowserResult] = None
 
         # Processing
         self.step_processor = StepProcessor()
@@ -136,25 +135,29 @@ class ExplorerAgent:
         self.recorded_steps = []
         started_at = datetime.now()
 
-        # Create browser profile and session
-        browser_profile = BrowserProfile(headless=self.headless)
-        self.browser_session = BrowserSession(browser_profile=browser_profile)
+        # Create browser using the factory (single source of truth)
+        self._browser_result = await BrowserFactory.create(headless=self.headless)
 
         # Build QA-focused system prompt
         qa_prompt = build_qa_system_prompt(task=task, url=url)
 
+        # Build agent kwargs with browser based on type
+        agent_kwargs = {
+            "task": f"Navigate to {url} and {task}",
+            "llm": self.llm,
+            "extend_system_message": qa_prompt,
+            "register_new_step_callback": self._on_step,
+            "register_done_callback": self._on_complete,
+            "generate_gif": self.output_config.capture_video,
+            "use_vision": True,
+            "max_actions_per_step": max_actions_per_step,
+        }
+
+        # Add browser kwargs based on type from factory
+        agent_kwargs.update(BrowserFactory.get_agent_kwargs(self._browser_result))
+
         # Create the agent with browser-use 0.11.x API
-        agent = Agent(
-            task=f"Navigate to {url} and {task}",
-            llm=self.llm,
-            browser_session=self.browser_session,
-            extend_system_message=qa_prompt,
-            register_new_step_callback=self._on_step,
-            register_done_callback=self._on_complete,
-            generate_gif=self.output_config.capture_video,
-            use_vision=True,
-            max_actions_per_step=max_actions_per_step,
-        )
+        agent = Agent(**agent_kwargs)
         self.current_agent = agent
 
         try:
@@ -255,9 +258,6 @@ class ExplorerAgent:
 
     async def close(self):
         """Close the browser and cleanup resources."""
-        if self.browser_session:
-            try:
-                await self.browser_session.stop()
-            except Exception:
-                pass  # Ignore close errors
-            self.browser_session = None
+        if self._browser_result:
+            await BrowserFactory.cleanup(self._browser_result)
+            self._browser_result = None

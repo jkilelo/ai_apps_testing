@@ -1,22 +1,23 @@
 """
 Advanced Browser Services Package
 
-This package provides advanced browser automation services built on top of browser-use,
-using Google's Gemini 3 Flash Preview model for enhanced AI-powered web automation.
-
-Features (non-redundant with browser-use):
-- Multi-tab orchestration and comparison workflows
-- Parallel agent execution with concurrency control
-- Structured data extraction with schema support
-- Web research framework with source tracking
+This package provides streaming browser automation services built on top of browser-use,
+using Google's Gemini model for AI-powered web automation with real-time SSE streaming.
 """
 
 from .base_service import get_gemini_llm, BrowserConfig, BaseAgentService, DEFAULT_MODEL
-from .multi_tab_agent import MultiTabAgent
-from .parallel_agents import ParallelAgentRunner, AgentTask, AgentResult
-from .data_extraction_agent import DataExtractionAgent
-from .research_agent import ResearchAgent
-from .service_runner import AdvancedBrowserService, TaskResult, run_browser_task
+from .streaming import (
+    StreamingSession,
+    StreamEvent,
+    LogLevel,
+    EventType,
+    create_session,
+    remove_session,
+    get_session,
+    create_step_callback,
+    create_done_callback,
+)
+from .streaming_runner import StreamingAgentRunner, get_streaming_runner
 
 __all__ = [
     # Base
@@ -24,15 +25,17 @@ __all__ = [
     "BrowserConfig",
     "BaseAgentService",
     "DEFAULT_MODEL",
-    # Agents
-    "MultiTabAgent",
-    "ParallelAgentRunner",
-    "AgentTask",
-    "AgentResult",
-    "DataExtractionAgent",
-    "ResearchAgent",
-    # Unified Service
-    "AdvancedBrowserService",
-    "TaskResult",
-    "run_browser_task",
+    # Streaming
+    "StreamingSession",
+    "StreamEvent",
+    "LogLevel",
+    "EventType",
+    "create_session",
+    "remove_session",
+    "get_session",
+    "create_step_callback",
+    "create_done_callback",
+    # Runner
+    "StreamingAgentRunner",
+    "get_streaming_runner",
 ]

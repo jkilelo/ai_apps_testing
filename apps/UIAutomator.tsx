@@ -13,19 +13,52 @@ import TestResultsPanel from '../components/TestResultsPanel';
 import ArtifactsViewer from '../components/ArtifactsViewer';
 import SessionBrowser from '../components/SessionBrowser';
 import SessionComparison from '../components/SessionComparison';
+import { useToast } from '../components/Toast';
 import { ExecutionLog, AgentMode, EventType, LogLevel } from '../types';
 
-const MODES: { id: AgentMode; name: string; icon: string; description: string }[] = [
-  { id: 'basic', name: 'UI Agent (Backend)', icon: 'fa-robot', description: 'Full UI Testing Agent with artifacts & reporting' },
-  { id: 'extract', name: 'Data Extraction', icon: 'fa-table', description: 'Extract structured data from a page' },
-  { id: 'research', name: 'Research Topic', icon: 'fa-search', description: 'Research a topic across multiple sources' },
-  { id: 'compare-products', name: 'Compare Products', icon: 'fa-balance-scale', description: 'Compare products across aspects' },
-  { id: 'compare-pages', name: 'Compare Pages', icon: 'fa-columns', description: 'Compare content across web pages' },
+const MODES: { id: AgentMode; name: string; icon: string; description: string; placeholder: string }[] = [
+  {
+    id: 'basic',
+    name: 'UI Test',
+    icon: 'fa-vial',
+    description: 'Run automated UI testing scenarios',
+    placeholder: 'Describe the UI test scenario...\n\nExample: Go to Amazon, search for "MacBook Pro M3", verify search results appear, and capture the product listing page.'
+  },
+  {
+    id: 'extract',
+    name: 'Extract',
+    icon: 'fa-database',
+    description: 'Extract structured data from web pages',
+    placeholder: ''
+  },
+  {
+    id: 'research',
+    name: 'Research',
+    icon: 'fa-microscope',
+    description: 'Research topics across multiple sources',
+    placeholder: ''
+  },
+  {
+    id: 'compare-products',
+    name: 'Compare',
+    icon: 'fa-balance-scale',
+    description: 'Compare products or services',
+    placeholder: ''
+  },
+  {
+    id: 'compare-pages',
+    name: 'Analyze',
+    icon: 'fa-chart-line',
+    description: 'Analyze and compare web pages',
+    placeholder: ''
+  },
 ];
 
 const UIAutomator: React.FC = () => {
+  const { addToast } = useToast();
   const [mode, setMode] = useState<AgentMode>('basic');
   const [loading, setLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
   const [logs, setLogs] = useState<ExecutionLog[]>([]);
   const [result, setResult] = useState<{ success: boolean; summary: string; data?: Record<string, unknown> } | null>(null);
   const [currentStep, setCurrentStep] = useState<number>(0);
@@ -34,6 +67,32 @@ const UIAutomator: React.FC = () => {
 
   // Cleanup function ref for aborting streams
   const cleanupRef = useRef<(() => void) | null>(null);
+
+  // Global settings
+  const [maxSteps, setMaxSteps] = useState(30);
+  const [headless, setHeadless] = useState(false);
+
+  // Recent tasks (stored in localStorage)
+  const [recentTasks, setRecentTasks] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('recentTasks');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [showRecentTasks, setShowRecentTasks] = useState(false);
+
+  // Save recent task to localStorage
+  const saveRecentTask = (task: string) => {
+    if (!task.trim()) return;
+    setRecentTasks(prev => {
+      // Remove duplicates and add to front, keep max 10
+      const newTasks = [task, ...prev.filter(t => t !== task)].slice(0, 10);
+      localStorage.setItem('recentTasks', JSON.stringify(newTasks));
+      return newTasks;
+    });
+  };
 
   // Basic mode state
   const [prompt, setPrompt] = useState('');
@@ -64,6 +123,25 @@ const UIAutomator: React.FC = () => {
       }
     };
   }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Enter or Cmd+Enter to run
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !loading) {
+        e.preventDefault();
+        handleRun();
+      }
+      // Escape to stop
+      if (e.key === 'Escape' && loading) {
+        e.preventDefault();
+        handleStop();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [loading, mode, prompt, extractUrl, extractSchema, researchTopic_, products, aspects, pageUrls, comparisonCriteria, maxSteps]);
 
   const addLog = (
     message: string,
@@ -134,6 +212,12 @@ const UIAutomator: React.FC = () => {
           data: event.data,
         });
         setLoading(false);
+        // Show toast notification
+        if (event.data?.success) {
+          addToast('success', 'Task completed successfully!');
+        } else {
+          addToast('error', 'Task failed. Check logs for details.');
+        }
         break;
       default:
         addLog(event.message, level, eventType, event.step, event.data);
@@ -143,10 +227,13 @@ const UIAutomator: React.FC = () => {
   const handleError = (error: Error) => {
     addLog(`Error: ${error.message}`, 'error', 'error');
     setLoading(false);
+    setIsInitializing(false);
+    addToast('error', `Error: ${error.message}`);
   };
 
   const handleComplete = () => {
     setLoading(false);
+    setIsInitializing(false);
     cleanupRef.current = null;
   };
 
@@ -156,6 +243,8 @@ const UIAutomator: React.FC = () => {
       cleanupRef.current = null;
       addLog('Task cancelled by user', 'warn', 'system');
       setLoading(false);
+      setIsInitializing(false);
+      addToast('warning', 'Task cancelled');
     }
   };
 
@@ -165,12 +254,31 @@ const UIAutomator: React.FC = () => {
       cleanupRef.current();
     }
 
+    // Immediate feedback - show initializing state right away
     setLoading(true);
+    setIsInitializing(true);
     setLogs([]);
     setResult(null);
     setCurrentStep(0);
 
-    addLog(`Starting ${MODES.find(m => m.id === mode)?.name} task...`, 'info', 'system');
+    const modeName = MODES.find(m => m.id === mode)?.name || 'Task';
+
+    // Add immediate feedback logs
+    addLog(`Initializing ${modeName}...`, 'info', 'system');
+
+    // Simulate connection steps with slight delays for visual feedback
+    setTimeout(() => {
+      if (cleanupRef.current) { // Only add if still running
+        addLog('Connecting to browser agent...', 'info', 'system');
+      }
+    }, 100);
+
+    setTimeout(() => {
+      if (cleanupRef.current) { // Only add if still running
+        addLog('Preparing test environment...', 'info', 'system');
+        setIsInitializing(false);
+      }
+    }, 300);
 
     let cleanup: (() => void) | null = null;
 
@@ -181,8 +289,9 @@ const UIAutomator: React.FC = () => {
           setLoading(false);
           return;
         }
+        saveRecentTask(prompt);
         cleanup = streamBasicTask(
-          { task: prompt },
+          { task: prompt, max_steps: maxSteps, headless },
           handleStreamEvent,
           handleError,
           handleComplete,
@@ -204,7 +313,7 @@ const UIAutomator: React.FC = () => {
           return;
         }
         cleanup = streamExtractData(
-          { url: extractUrl, data_schema: schema, max_items: extractMaxItems },
+          { url: extractUrl, data_schema: schema, max_items: extractMaxItems, max_steps: maxSteps, headless },
           handleStreamEvent,
           handleError,
           handleComplete,
@@ -218,7 +327,7 @@ const UIAutomator: React.FC = () => {
           return;
         }
         cleanup = streamResearchTopic(
-          { topic: researchTopic_, depth: researchDepth, max_sources: researchMaxSources },
+          { topic: researchTopic_, depth: researchDepth, max_sources: researchMaxSources, max_steps: maxSteps, headless },
           handleStreamEvent,
           handleError,
           handleComplete,
@@ -234,7 +343,7 @@ const UIAutomator: React.FC = () => {
         const productList = products.split(',').map(p => p.trim()).filter(Boolean);
         const aspectList = aspects.split(',').map(a => a.trim()).filter(Boolean);
         cleanup = streamCompareProducts(
-          { products: productList, aspects: aspectList },
+          { products: productList, aspects: aspectList, max_steps: maxSteps, headless },
           handleStreamEvent,
           handleError,
           handleComplete,
@@ -249,7 +358,7 @@ const UIAutomator: React.FC = () => {
         }
         const urls = pageUrls.split('\n').map(u => u.trim()).filter(Boolean);
         cleanup = streamComparePages(
-          { urls, comparison_criteria: comparisonCriteria },
+          { urls, comparison_criteria: comparisonCriteria, max_steps: maxSteps, headless },
           handleStreamEvent,
           handleError,
           handleComplete,
@@ -269,138 +378,232 @@ const UIAutomator: React.FC = () => {
     switch (mode) {
       case 'basic':
         return (
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Go to Amazon, search for 'Macbook M3', and find the lowest price..."
-            className="w-full min-h-[100px] p-4 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
-          />
-        );
+          <div className={`space-y-3 ${loading ? 'opacity-60 pointer-events-none' : ''}`}>
+            {/* Main Input Area */}
+            <div className="relative group">
+              {/* Textarea with enhanced styling */}
+              <div className={`relative rounded-xl overflow-hidden transition-all duration-200 ${
+                loading ? 'ring-1 ring-acme-gray-200 bg-acme-gray-100' :
+                prompt ? 'ring-2 ring-acme-navy/20' : 'ring-1 ring-acme-gray-200 hover:ring-acme-gray-300'
+              }`}>
+                {/* Left accent bar */}
+                <div className={`absolute left-0 top-0 bottom-0 w-1 transition-colors ${
+                  loading ? 'bg-acme-gray-300' :
+                  prompt ? 'bg-acme-navy' : 'bg-acme-gray-200 group-hover:bg-acme-gray-300'
+                }`}></div>
 
-      case 'extract':
-        return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">URL</label>
-              <input
-                type="url"
-                value={extractUrl}
-                onChange={(e) => setExtractUrl(e.target.value)}
-                placeholder="https://example.com/products"
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              />
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onFocus={() => setShowRecentTasks(false)}
+                  disabled={loading}
+                  placeholder="Example: Navigate to the login page, verify the username and password fields are present, attempt login with invalid credentials, and verify the error message is displayed correctly..."
+                  className={`w-full h-[80px] pl-4 pr-10 py-3 text-sm text-acme-gray-900 placeholder:text-acme-gray-500 transition-all outline-none resize-none leading-relaxed ${
+                    loading ? 'bg-acme-gray-100 cursor-not-allowed' : 'bg-acme-gray-50/50 focus:bg-white'
+                  }`}
+                />
+
+                {/* Clear button */}
+                {prompt && (
+                  <button
+                    onClick={() => setPrompt('')}
+                    className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-lg bg-acme-gray-200/80 hover:bg-acme-red/10 text-acme-gray-600 hover:text-acme-red transition-colors"
+                    title="Clear"
+                  >
+                    <i className="fas fa-times text-[10px]"></i>
+                  </button>
+                )}
+
+                {/* Character count */}
+                <div className="absolute bottom-2 right-2 text-[10px] text-acme-gray-500 font-medium">
+                  {prompt.length > 0 && <span>{prompt.length} chars</span>}
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Data Schema (JSON)</label>
-              <textarea
-                value={extractSchema}
-                onChange={(e) => setExtractSchema(e.target.value)}
-                className="w-full min-h-[80px] p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Max Items</label>
-              <input
-                type="number"
-                value={extractMaxItems}
-                onChange={(e) => setExtractMaxItems(parseInt(e.target.value) || 10)}
-                min={1}
-                max={100}
-                className="w-32 p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              />
+
+            {/* Bottom Actions Bar */}
+            <div className="flex items-center justify-between">
+              {/* Left: Quick Actions */}
+              <div className="flex items-center gap-2">
+                {/* Recent Tasks Dropdown */}
+                {recentTasks.length > 0 && (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowRecentTasks(!showRecentTasks)}
+                      className={`h-8 px-3 rounded-lg flex items-center gap-2 text-xs font-medium transition-all ${
+                        showRecentTasks
+                          ? 'bg-acme-navy text-white'
+                          : 'bg-acme-gray-100 text-acme-gray-700 hover:bg-acme-gray-200 hover:text-acme-gray-900'
+                      }`}
+                    >
+                      <i className="fas fa-clock-rotate-left text-[10px]"></i>
+                      <span>Recent</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                        showRecentTasks ? 'bg-white/20' : 'bg-acme-gray-200 text-acme-gray-600'
+                      }`}>{recentTasks.length}</span>
+                    </button>
+                    {showRecentTasks && (
+                      <div className="absolute top-full left-0 mt-1 w-80 max-h-52 overflow-y-auto bg-white border border-acme-gray-200 rounded-xl shadow-xl z-20">
+                        <div className="p-2 border-b border-acme-gray-100 flex items-center justify-between sticky top-0 bg-white">
+                          <span className="text-xs font-semibold text-acme-gray-800 flex items-center gap-2">
+                            <i className="fas fa-history text-acme-gray-500"></i>
+                            Recent Tasks
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRecentTasks([]);
+                              localStorage.removeItem('recentTasks');
+                              setShowRecentTasks(false);
+                            }}
+                            className="text-[10px] text-acme-gray-600 hover:text-acme-red px-2 py-1 rounded hover:bg-acme-red/5 transition-colors font-medium"
+                          >
+                            Clear All
+                          </button>
+                        </div>
+                        <div className="p-1">
+                          {recentTasks.map((task, index) => (
+                            <button
+                              key={index}
+                              onClick={() => {
+                                setPrompt(task);
+                                setShowRecentTasks(false);
+                              }}
+                              className="w-full text-left px-3 py-2 text-xs text-acme-gray-800 hover:bg-acme-navy/5 hover:text-acme-navy rounded-lg transition-colors group"
+                            >
+                              <div className="flex items-start gap-2">
+                                <i className="fas fa-arrow-turn-up fa-rotate-90 text-[10px] text-acme-gray-400 group-hover:text-acme-navy mt-0.5"></i>
+                                <span className="line-clamp-2 leading-relaxed">{task}</span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Example scenarios hint */}
+                <div className="hidden md:flex items-center gap-1.5 text-[10px] text-acme-gray-600">
+                  <i className="fas fa-lightbulb text-amber-500"></i>
+                  <span>Tip: Be specific about elements, actions, and expected outcomes</span>
+                </div>
+              </div>
+
+              {/* Right: Status indicator */}
+              <div className="flex items-center gap-2">
+                {prompt && (
+                  <span className="text-[10px] text-emerald-700 font-medium bg-emerald-50 px-2 py-1 rounded-lg flex items-center gap-1">
+                    <i className="fas fa-check-circle"></i>
+                    Ready
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         );
 
-      case 'research':
+      case 'extract':
         return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Research Topic</label>
+          <div className="flex gap-2 items-start">
+            <div className="flex-1 grid grid-cols-4 gap-2">
               <input
-                type="text"
-                value={researchTopic_}
-                onChange={(e) => setResearchTopic(e.target.value)}
-                placeholder="Latest trends in AI development"
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                type="url"
+                value={extractUrl}
+                onChange={(e) => setExtractUrl(e.target.value)}
+                placeholder="Target URL (https://...)"
+                className="col-span-2 p-2 bg-acme-gray-50 border border-acme-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-acme-navy outline-none"
               />
-            </div>
-            <div className="flex gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Depth</label>
-                <select
-                  value={researchDepth}
-                  onChange={(e) => setResearchDepth(e.target.value as 'shallow' | 'moderate' | 'deep')}
-                  className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                >
-                  <option value="shallow">Shallow</option>
-                  <option value="moderate">Moderate</option>
-                  <option value="deep">Deep</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Max Sources</label>
+              <textarea
+                value={extractSchema}
+                onChange={(e) => setExtractSchema(e.target.value)}
+                placeholder='{"name": "...", "price": "..."}'
+                className="col-span-1 row-span-2 p-2 bg-acme-gray-50 border border-acme-gray-200 rounded-lg text-[10px] font-mono focus:ring-1 focus:ring-acme-navy outline-none resize-none h-[52px]"
+              />
+              <div className="flex items-center gap-1">
+                <span className="text-[9px] text-acme-gray-600 font-medium">Max:</span>
                 <input
                   type="number"
-                  value={researchMaxSources}
-                  onChange={(e) => setResearchMaxSources(parseInt(e.target.value) || 5)}
+                  value={extractMaxItems}
+                  onChange={(e) => setExtractMaxItems(parseInt(e.target.value) || 10)}
                   min={1}
-                  max={20}
-                  className="w-24 p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  max={100}
+                  className="w-14 p-2 bg-acme-gray-50 border border-acme-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-acme-navy outline-none"
                 />
               </div>
             </div>
           </div>
         );
 
-      case 'compare-products':
+      case 'research':
         return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Products (comma-separated)</label>
+          <div className="flex gap-2 items-center">
+            <input
+              type="text"
+              value={researchTopic_}
+              onChange={(e) => setResearchTopic(e.target.value)}
+              placeholder="Research topic (e.g., Latest trends in AI development)"
+              className="flex-1 p-2 bg-acme-gray-50 border border-acme-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-acme-navy outline-none"
+            />
+            <select
+              value={researchDepth}
+              onChange={(e) => setResearchDepth(e.target.value as 'shallow' | 'moderate' | 'deep')}
+              className="w-28 p-2 bg-acme-gray-50 border border-acme-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-acme-navy outline-none"
+            >
+              <option value="shallow">Quick</option>
+              <option value="moderate">Moderate</option>
+              <option value="deep">Deep</option>
+            </select>
+            <div className="flex items-center gap-1">
+              <span className="text-[9px] text-acme-gray-600 font-medium">Sources:</span>
               <input
-                type="text"
-                value={products}
-                onChange={(e) => setProducts(e.target.value)}
-                placeholder="iPhone 15 Pro, Samsung Galaxy S24, Pixel 8 Pro"
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Comparison Aspects (comma-separated)</label>
-              <input
-                type="text"
-                value={aspects}
-                onChange={(e) => setAspects(e.target.value)}
-                placeholder="price, features, reviews, battery life"
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                type="number"
+                value={researchMaxSources}
+                onChange={(e) => setResearchMaxSources(parseInt(e.target.value) || 5)}
+                min={1}
+                max={20}
+                className="w-12 p-2 bg-acme-gray-50 border border-acme-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-acme-navy outline-none"
               />
             </div>
           </div>
         );
 
+      case 'compare-products':
+        return (
+          <div className="flex gap-2 items-center">
+            <input
+              type="text"
+              value={products}
+              onChange={(e) => setProducts(e.target.value)}
+              placeholder="Products to compare (comma separated)"
+              className="flex-1 p-2 bg-acme-gray-50 border border-acme-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-acme-navy outline-none"
+            />
+            <input
+              type="text"
+              value={aspects}
+              onChange={(e) => setAspects(e.target.value)}
+              placeholder="Criteria (price, features...)"
+              className="w-48 p-2 bg-acme-gray-50 border border-acme-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-acme-navy outline-none"
+            />
+          </div>
+        );
+
       case 'compare-pages':
         return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Page URLs (one per line)</label>
-              <textarea
-                value={pageUrls}
-                onChange={(e) => setPageUrls(e.target.value)}
-                placeholder="https://example1.com&#10;https://example2.com"
-                className="w-full min-h-[80px] p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">What to Compare</label>
-              <input
-                type="text"
-                value={comparisonCriteria}
-                onChange={(e) => setComparisonCriteria(e.target.value)}
-                placeholder="pricing tiers, features, customer reviews"
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              />
-            </div>
+          <div className="flex gap-2 items-start">
+            <textarea
+              value={pageUrls}
+              onChange={(e) => setPageUrls(e.target.value)}
+              placeholder="URLs to compare (one per line)"
+              className="flex-1 h-[52px] p-2 bg-acme-gray-50 border border-acme-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-acme-navy outline-none resize-none"
+            />
+            <input
+              type="text"
+              value={comparisonCriteria}
+              onChange={(e) => setComparisonCriteria(e.target.value)}
+              placeholder="What to analyze"
+              className="w-48 p-2 bg-acme-gray-50 border border-acme-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-acme-navy outline-none"
+            />
           </div>
         );
 
@@ -409,143 +612,272 @@ const UIAutomator: React.FC = () => {
     }
   };
 
+  // Output tab state
+  const [outputTab, setOutputTab] = useState<'logs' | 'results' | 'artifacts'>('logs');
+
+  const currentMode = MODES.find(m => m.id === mode);
+
   return (
-    <div className="space-y-6">
-      {/* Header with History and Compare buttons */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-          <i className="fas fa-robot text-blue-500"></i>
-          UI Automator
-        </h1>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              setShowComparison(!showComparison);
-              if (!showComparison) setShowSessionBrowser(false);
-            }}
-            className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
-              showComparison
-                ? 'bg-purple-100 text-purple-700 border-2 border-purple-500'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
-            }`}
-          >
-            <i className="fas fa-columns"></i>
-            Compare
-          </button>
-          <button
-            onClick={() => {
-              setShowSessionBrowser(!showSessionBrowser);
-              if (!showSessionBrowser) setShowComparison(false);
-            }}
-            className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
-              showSessionBrowser
-                ? 'bg-blue-100 text-blue-700 border-2 border-blue-500'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
-            }`}
-          >
-            <i className="fas fa-history"></i>
-            History
-          </button>
-        </div>
-      </div>
-
-      {/* Session Browser Panel */}
-      {showSessionBrowser && (
-        <SessionBrowser
-          onClose={() => setShowSessionBrowser(false)}
-          onRerun={(task) => {
-            setPrompt(task);
-            setMode('basic');
-            setShowSessionBrowser(false);
-          }}
-        />
-      )}
-
-      {/* Session Comparison Panel */}
-      {showComparison && (
-        <SessionComparison onClose={() => setShowComparison(false)} />
-      )}
-
-      {/* Mode Selector */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <h2 className="text-sm font-semibold mb-3 text-slate-600">Select Mode</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-          {MODES.map((m) => (
-            <button
-              key={m.id}
-              onClick={() => setMode(m.id)}
-              disabled={loading}
-              className={`p-3 rounded-lg text-left transition-all ${mode === m.id
-                  ? 'bg-blue-50 border-2 border-blue-500 text-blue-700'
-                  : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
+    <div className="h-full flex flex-col gap-2">
+      {/* TOOLBAR - Compact */}
+      <div className="bg-white rounded-lg border border-acme-gray-200 shadow-sm flex-shrink-0">
+        <div className="px-3 py-1.5 flex items-center justify-between gap-3">
+          {/* Left: Mode Selector */}
+          <div className="flex items-center bg-acme-gray-50 rounded-lg p-0.5">
+            {MODES.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setMode(m.id)}
+                disabled={loading}
+                title={m.description}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all flex items-center gap-1.5 ${
+                  mode === m.id
+                    ? 'bg-acme-navy text-white shadow-sm'
+                    : 'text-acme-gray-700 hover:text-acme-gray-900 hover:bg-white'
                 } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <i className={`fas ${m.icon} text-lg mb-1`}></i>
-              <div className="text-xs font-medium">{m.name}</div>
-            </button>
-          ))}
-        </div>
-        <p className="mt-3 text-xs text-slate-500">
-          {MODES.find(m => m.id === mode)?.description}
-        </p>
-      </div>
-
-      {/* Task Input */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <i className={`fas ${MODES.find(m => m.id === mode)?.icon} text-blue-500`}></i>
-          {MODES.find(m => m.id === mode)?.name}
-        </h2>
-
-        {renderModeInput()}
-
-        <div className="mt-4 flex justify-between items-center">
-          <div className="text-xs text-slate-500 flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${loading ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></span>
-            {loading ? `Running... Step ${currentStep}` : 'Ready'}
+              >
+                <i className={`fas ${m.icon} text-[9px]`}></i>
+                <span>{m.name}</span>
+              </button>
+            ))}
           </div>
-          <div className="flex gap-2">
-            {loading && (
+
+          {/* Center: Settings (compact) */}
+          <div className="flex items-center gap-2 text-xs">
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-acme-gray-50 rounded-md">
+              <span className="text-acme-gray-600 text-[9px] font-medium">Steps</span>
+              <input
+                type="number" min="10" max="100" step="5" value={maxSteps}
+                onChange={(e) => setMaxSteps(parseInt(e.target.value) || 30)}
+                disabled={loading}
+                className="w-8 bg-white text-acme-gray-700 font-medium text-[11px] text-center rounded border border-acme-gray-200 focus:outline-none"
+              />
+            </div>
+            <button
+              onClick={() => setHeadless(!headless)}
+              disabled={loading}
+              className={`flex items-center gap-1 px-2 py-1 rounded-md transition-all text-[10px] font-medium ${
+                headless
+                  ? 'bg-acme-navy/10 text-acme-navy'
+                  : 'bg-acme-gray-50 text-acme-gray-700 hover:bg-acme-gray-100'
+              }`}
+              title="Run without browser window"
+            >
+              <i className={`fas ${headless ? 'fa-eye-slash' : 'fa-eye'} text-[9px]`}></i>
+              {headless ? 'Hidden' : 'Visible'}
+            </button>
+          </div>
+
+          {/* Right: Actions */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => { setShowSessionBrowser(!showSessionBrowser); setShowComparison(false); }}
+              className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${
+                showSessionBrowser
+                  ? 'bg-acme-navy text-white'
+                  : 'text-acme-gray-600 hover:bg-acme-gray-100 hover:text-acme-gray-800'
+              }`}
+              title="History"
+            >
+              <i className="fas fa-clock-rotate-left text-xs"></i>
+            </button>
+            <button
+              onClick={() => { setShowComparison(!showComparison); setShowSessionBrowser(false); }}
+              className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${
+                showComparison
+                  ? 'bg-acme-navy text-white'
+                  : 'text-acme-gray-600 hover:bg-acme-gray-100 hover:text-acme-gray-800'
+              }`}
+              title="Compare"
+            >
+              <i className="fas fa-code-compare text-xs"></i>
+            </button>
+            <div className="w-px h-5 bg-acme-gray-200"></div>
+            {loading ? (
               <button
                 onClick={handleStop}
-                className="px-4 py-2.5 rounded-lg font-medium transition-all bg-red-100 text-red-700 hover:bg-red-200 active:scale-95 flex items-center gap-2"
+                className="h-7 px-3 rounded-md text-[11px] font-semibold bg-acme-red text-white hover:bg-acme-red-light transition-all flex items-center gap-1.5 relative overflow-hidden"
               >
-                <i className="fas fa-stop"></i>
-                Stop
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
+                <i className="fas fa-circle-notch fa-spin text-[9px]"></i>
+                <span>Stop</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleRun}
+                className="h-7 px-4 rounded-md text-[11px] font-semibold bg-acme-navy text-white hover:bg-acme-navy-light transition-all flex items-center gap-1.5"
+              >
+                <i className="fas fa-play text-[9px]"></i>
+                Run
               </button>
             )}
-            <button
-              onClick={handleRun}
-              disabled={loading}
-              className={`px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${loading
-                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95'
+          </div>
+        </div>
+
+        {/* Status Bar - only show when running */}
+        {loading && (
+          <div className="px-3 pb-1.5">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-acme-navy animate-pulse"></div>
+              <div className="flex-1 h-1 bg-acme-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-acme-navy transition-all duration-300"
+                  style={{ width: `${Math.min((currentStep / maxSteps) * 100, 100)}%` }}
+                />
+              </div>
+              <span className="text-[9px] font-semibold text-acme-gray-700">
+                {currentStep}/{maxSteps}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Session Browser (conditional) */}
+      {showSessionBrowser && (
+        <div className="flex-shrink-0">
+          <SessionBrowser
+            onClose={() => setShowSessionBrowser(false)}
+            onRerun={(task) => { setPrompt(task); setMode('basic'); setShowSessionBrowser(false); }}
+          />
+        </div>
+      )}
+
+      {/* Session Comparison (conditional) */}
+      {showComparison && (
+        <div className="flex-shrink-0">
+          <SessionComparison onClose={() => setShowComparison(false)} />
+        </div>
+      )}
+
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 min-h-0 flex flex-col gap-2">
+        {/* Task Input Panel - Enhanced Primary Input */}
+        <div className="bg-white rounded-xl border border-acme-gray-200 shadow-sm flex-shrink-0 overflow-hidden">
+          {/* Gradient Accent Bar */}
+          <div className="h-1 bg-gradient-to-r from-acme-navy via-acme-navy-light to-acme-navy"></div>
+
+          {/* Input Header */}
+          <div className="px-4 py-2.5 border-b border-acme-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-acme-navy to-acme-navy-light flex items-center justify-center shadow-sm">
+                <i className="fas fa-vial text-white text-xs"></i>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-acme-gray-900">Test Scenario</h3>
+                <p className="text-[10px] text-acme-gray-600 font-medium">Describe what you want the AI agent to test</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-acme-gray-600 hidden sm:inline">
+                <kbd className="px-1.5 py-0.5 bg-acme-gray-100 border border-acme-gray-200 rounded text-[9px] font-mono text-acme-gray-700">⌘↵</kbd> to run
+              </span>
+            </div>
+          </div>
+
+          {/* Input Content */}
+          <div className="p-4">
+            {renderModeInput()}
+          </div>
+        </div>
+
+        {/* OUTPUT SECTION - Maximized */}
+        <div className="flex-1 min-h-0 bg-white rounded-lg border border-acme-gray-200 shadow-sm flex flex-col overflow-hidden">
+          {/* Tab Header - Compact */}
+          <div className="px-2 py-1.5 border-b border-acme-gray-100 flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={() => setOutputTab('logs')}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all flex items-center gap-1.5 ${
+                  outputTab === 'logs'
+                    ? 'bg-acme-navy text-white'
+                    : 'text-acme-gray-700 hover:text-acme-gray-900 hover:bg-acme-gray-100'
                 }`}
-            >
-              {loading ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-play"></i>}
-              {loading ? 'Running...' : 'Run'}
-            </button>
+              >
+                <i className="fas fa-terminal text-[9px]"></i>
+                Logs
+                {logs.length > 0 && (
+                  <span className={`px-1 py-0.5 rounded text-[9px] font-bold ${
+                    outputTab === 'logs' ? 'bg-white/20' : 'bg-acme-gray-200 text-acme-gray-600'
+                  }`}>{logs.length}</span>
+                )}
+              </button>
+              <button
+                onClick={() => setOutputTab('results')}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all flex items-center gap-1.5 ${
+                  outputTab === 'results'
+                    ? 'bg-acme-navy text-white'
+                    : 'text-acme-gray-700 hover:text-acme-gray-900 hover:bg-acme-gray-100'
+                }`}
+              >
+                <i className="fas fa-chart-bar text-[9px]"></i>
+                Results
+                {result && (
+                  <span className={`w-1.5 h-1.5 rounded-full ${result.success ? 'bg-emerald-400' : 'bg-acme-red'}`}></span>
+                )}
+              </button>
+              <button
+                onClick={() => setOutputTab('artifacts')}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all flex items-center gap-1.5 ${
+                  outputTab === 'artifacts'
+                    ? 'bg-acme-navy text-white'
+                    : 'text-acme-gray-700 hover:text-acme-gray-900 hover:bg-acme-gray-100'
+                }`}
+              >
+                <i className="fas fa-folder-open text-[9px]"></i>
+                Artifacts
+              </button>
+            </div>
+            {outputTab === 'logs' && logs.length > 0 && (
+              <button
+                onClick={() => !loading && setLogs([])}
+                disabled={loading}
+                className="px-2 py-1 text-[9px] text-acme-gray-600 hover:text-acme-red hover:bg-acme-red/5 rounded transition-all disabled:opacity-50 flex items-center gap-1"
+              >
+                <i className="fas fa-trash-alt"></i>
+                Clear
+              </button>
+            )}
+          </div>
+
+          {/* Tab Content */}
+          <div className="flex-1 min-h-0 overflow-auto">
+            {outputTab === 'logs' && (
+              <LogViewer
+                logs={logs}
+                maxSteps={maxSteps}
+                currentStep={currentStep}
+                isInitializing={isInitializing}
+                isRunning={loading}
+              />
+            )}
+            {outputTab === 'results' && (
+              <TestResultsPanel
+                logs={logs}
+                result={result}
+                isRunning={loading}
+                currentStep={currentStep}
+                maxSteps={maxSteps}
+              />
+            )}
+            {outputTab === 'artifacts' && result && (
+              <ArtifactsViewer
+                sessionId={result.data?.session_id as string | null}
+                outputDirectory={result.data?.output_directory as string | undefined}
+              />
+            )}
+            {outputTab === 'artifacts' && !result && (
+              <div className="flex flex-col items-center justify-center h-full">
+                <div className="w-16 h-16 rounded-2xl bg-acme-gray-100 flex items-center justify-center mb-4">
+                  <i className="fas fa-images text-2xl text-acme-gray-300"></i>
+                </div>
+                <h3 className="text-sm font-semibold text-acme-gray-800 mb-1">No Artifacts Yet</h3>
+                <p className="text-xs text-acme-gray-600">Run a task to generate screenshots, reports, and other artifacts</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
-
-      <LogViewer logs={logs} maxSteps={30} currentStep={currentStep} />
-
-      <TestResultsPanel
-        logs={logs}
-        result={result}
-        isRunning={loading}
-        currentStep={currentStep}
-        maxSteps={30}
-      />
-
-      {/* Artifacts Viewer - show after task completion */}
-      {result && (
-        <ArtifactsViewer
-          sessionId={result.data?.session_id as string | null}
-          outputDirectory={result.data?.output_directory as string | undefined}
-        />
-      )}
     </div>
   );
 };

@@ -5,28 +5,19 @@ if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from pathlib import Path
-from google import genai
-from google.genai import types
 from dotenv import load_dotenv
-import os
 import json
 import asyncio
-import browsers_services
-from advanced_browser_services.service_runner import AdvancedBrowserService
-from advanced_browser_services.streaming_runner import get_streaming_runner, StreamingAgentRunner
+from advanced_browser_services.streaming_runner import get_streaming_runner
 
 load_dotenv()
 
 app = FastAPI()
-
-# Initialize advanced browser service
-advanced_service = AdvancedBrowserService(headless=False)
 
 # Initialize streaming runner
 streaming_runner = get_streaming_runner()
@@ -40,204 +31,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-client = genai.Client(api_key=GEMINI_API_KEY)
-
-class UIAutomatorRequest(BaseModel):
-    instruction: str
-
 from typing import List, Optional
-from enum import Enum
-
-class ActionStatus(str, Enum):
-    done = "done"
-    failed = "failed"
-
-class UIStep(BaseModel):
-    action: str
-    status: ActionStatus
-
-class UIAutomatorResponse(BaseModel):
-    steps: List[UIStep]
-    summary: str
-
-
-# ============== Advanced Browser Service Models ==============
-
-class ExtractDataRequest(BaseModel):
-    url: str
-    data_schema: dict
-    max_items: Optional[int] = None
-    max_steps: int = 40
-
-
-class ResearchTopicRequest(BaseModel):
-    topic: str
-    depth: str = "moderate"  # shallow, moderate, deep
-    max_sources: int = 5
-    max_steps: int = 50
-
-
-class CompareProductsRequest(BaseModel):
-    products: List[str]
-    aspects: List[str]
-    max_steps: int = 60
-
-
-class ParallelTask(BaseModel):
-    id: str
-    description: str
-    max_steps: int = 25
-
-
-class RunParallelTasksRequest(BaseModel):
-    tasks: List[ParallelTask]
-    max_concurrent: int = 3
-
-
-class ComparePagesRequest(BaseModel):
-    urls: List[str]
-    comparison_criteria: str
-    max_steps: int = 30
-
-
-class TaskStep(BaseModel):
-    action: str
-    status: str
-
-
-class TaskResultResponse(BaseModel):
-    success: bool
-    task_type: str
-    summary: str
-    data: dict
-    steps: List[dict]
-    error: Optional[str] = None
-
-
-@app.post("/run-ui-automator")
-async def run_ui_automator(request: UIAutomatorRequest):
-    try:
-        # Call the new browser-use based service
-        result = await browsers_services.run_ui_automator(request.instruction)
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# ============== Advanced Browser Service Endpoints ==============
-
-@app.post("/extract-data", response_model=TaskResultResponse)
-async def extract_data(request: ExtractDataRequest):
-    """Extract structured data from a web page."""
-    try:
-        result = await advanced_service.extract_data(
-            url=request.url,
-            data_schema=request.data_schema,
-            max_items=request.max_items,
-            max_steps=request.max_steps,
-        )
-        return TaskResultResponse(
-            success=result.success,
-            task_type=result.task_type,
-            summary=result.summary,
-            data=result.data,
-            steps=result.steps,
-            error=result.error,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/research-topic", response_model=TaskResultResponse)
-async def research_topic(request: ResearchTopicRequest):
-    """Research a topic and gather information from multiple sources."""
-    try:
-        result = await advanced_service.research_topic(
-            topic=request.topic,
-            depth=request.depth,
-            max_sources=request.max_sources,
-            max_steps=request.max_steps,
-        )
-        return TaskResultResponse(
-            success=result.success,
-            task_type=result.task_type,
-            summary=result.summary,
-            data=result.data,
-            steps=result.steps,
-            error=result.error,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/compare-products", response_model=TaskResultResponse)
-async def compare_products(request: CompareProductsRequest):
-    """Compare multiple products across specified aspects."""
-    try:
-        result = await advanced_service.compare_products(
-            products=request.products,
-            aspects=request.aspects,
-            max_steps=request.max_steps,
-        )
-        return TaskResultResponse(
-            success=result.success,
-            task_type=result.task_type,
-            summary=result.summary,
-            data=result.data,
-            steps=result.steps,
-            error=result.error,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/run-parallel-tasks")
-async def run_parallel_tasks(request: RunParallelTasksRequest):
-    """Run multiple browser tasks in parallel."""
-    try:
-        tasks = [
-            {"id": t.id, "description": t.description, "max_steps": t.max_steps}
-            for t in request.tasks
-        ]
-        results = await advanced_service.run_parallel_tasks(
-            tasks=tasks,
-            max_concurrent=request.max_concurrent,
-        )
-        return [
-            TaskResultResponse(
-                success=r.success,
-                task_type=r.task_type,
-                summary=r.summary,
-                data=r.data,
-                steps=r.steps,
-                error=r.error,
-            )
-            for r in results
-        ]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/compare-pages", response_model=TaskResultResponse)
-async def compare_pages(request: ComparePagesRequest):
-    """Compare content across multiple web pages using tabs."""
-    try:
-        result = await advanced_service.compare_pages(
-            urls=request.urls,
-            comparison_criteria=request.comparison_criteria,
-            max_steps=request.max_steps,
-        )
-        return TaskResultResponse(
-            success=result.success,
-            task_type=result.task_type,
-            summary=result.summary,
-            data=result.data,
-            steps=result.steps,
-            error=result.error,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============== SSE Streaming Endpoints ==============
@@ -586,11 +380,22 @@ async def get_artifact_file(session_id: str, file_path: str):
     }
     media_type = media_types.get(suffix, "application/octet-stream")
 
-    return FileResponse(
-        path=file_full_path,
-        media_type=media_type,
-        filename=file_full_path.name,
-    )
+    # Files that should display inline (not trigger download)
+    inline_types = {".html", ".png", ".gif", ".jpg", ".jpeg"}
+
+    if suffix in inline_types:
+        # Don't set filename for inline content - allows iframe/img display
+        return FileResponse(
+            path=file_full_path,
+            media_type=media_type,
+        )
+    else:
+        # Set filename for downloadable files
+        return FileResponse(
+            path=file_full_path,
+            media_type=media_type,
+            filename=file_full_path.name,
+        )
 
 
 @app.get("/artifacts/{session_id}/code")
@@ -665,4 +470,4 @@ async def list_sessions():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8001)

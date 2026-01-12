@@ -136,9 +136,31 @@ class ReportGenerator:
         }
 
     def _generate_styles(self) -> str:
-        """Generate CSS styles for the HTML report."""
+        """Generate CSS styles for the HTML report with Acme corporate branding."""
         return """
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --acme-navy: #003B70;
+            --acme-navy-light: #004d94;
+            --acme-navy-dark: #002a52;
+            --acme-red: #D9261C;
+            --acme-red-light: #e54338;
+            --acme-gray-50: #f8f9fa;
+            --acme-gray-100: #f1f3f5;
+            --acme-gray-200: #e9ecef;
+            --acme-gray-300: #dee2e6;
+            --acme-gray-400: #ced4da;
+            --acme-gray-500: #adb5bd;
+            --acme-gray-600: #6c757d;
+            --acme-gray-700: #495057;
+            --acme-gray-800: #343a40;
+            --acme-gray-900: #212529;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -146,106 +168,236 @@ class ReportGenerator:
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background-color: #f5f5f5;
-            color: #333;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--acme-gray-100);
+            color: var(--acme-gray-900);
             line-height: 1.6;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 24px;
         }
 
+        /* Header with Acme branding */
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--acme-navy) 0%, var(--acme-navy-light) 100%);
             color: white;
-            padding: 30px;
-            border-radius: 10px;
+            padding: 32px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 59, 112, 0.1), 0 2px 4px -1px rgba(0, 59, 112, 0.06);
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            gap: 16px;
             margin-bottom: 20px;
         }
 
+        .header-logo {
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
         .header h1 {
-            font-size: 1.8em;
-            margin-bottom: 10px;
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .header .subtitle {
+            font-size: 0.85em;
+            opacity: 0.8;
         }
 
         .header .meta {
-            opacity: 0.9;
-            font-size: 0.9em;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            background: rgba(255,255,255,0.1);
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 0.85em;
         }
 
+        .header .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header .meta-item i {
+            width: 20px;
+            opacity: 0.7;
+        }
+
+        .header .meta-label {
+            opacity: 0.7;
+            margin-right: 4px;
+        }
+
+        /* Summary Stats */
         .summary {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        @media (min-width: 768px) {
+            .summary {
+                grid-template-columns: repeat(4, 1fr);
+            }
         }
 
         .stat-card {
             background: white;
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            text-align: center;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--acme-gray-200);
+            transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        .stat-card .value {
-            font-size: 2.5em;
-            font-weight: bold;
-            margin-bottom: 5px;
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .stat-card .stat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .stat-card .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
         }
 
         .stat-card .label {
-            color: #666;
-            font-size: 0.9em;
+            font-size: 0.7em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--acme-gray-500);
         }
 
-        .stat-card.passed .value { color: #22c55e; }
-        .stat-card.failed .value { color: #ef4444; }
-        .stat-card.rate .value { color: #3b82f6; }
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .stat-card.total .stat-icon { background: rgba(0,59,112,0.1); color: var(--acme-navy); }
+        .stat-card.total .value { color: var(--acme-navy); }
+
+        .stat-card.passed .stat-icon { background: #dcfce7; color: #16a34a; }
+        .stat-card.passed .value { color: #16a34a; }
+
+        .stat-card.failed .stat-icon { background: #fee2e2; color: #dc2626; }
+        .stat-card.failed .value { color: #dc2626; }
+
+        .stat-card.rate .stat-icon { background: #dbeafe; color: #2563eb; }
+        .stat-card.rate .value { color: #2563eb; }
+
+        /* Scenarios */
+        .scenarios-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding: 0 4px;
+        }
+
+        .scenarios-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--acme-gray-800);
+        }
+
+        .scenarios-header .count {
+            background: var(--acme-navy);
+            color: white;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
 
         .scenario {
             background: white;
-            border-radius: 10px;
-            margin-bottom: 20px;
+            border-radius: 16px;
+            margin-bottom: 16px;
             overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--acme-gray-200);
         }
 
         .scenario-header {
-            padding: 20px;
+            padding: 16px 20px;
             cursor: pointer;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid var(--acme-gray-100);
+            transition: background 0.2s;
         }
 
         .scenario-header:hover {
-            background-color: #f9f9f9;
+            background-color: var(--acme-gray-50);
         }
 
         .scenario.passed .scenario-header {
-            border-left: 4px solid #22c55e;
+            border-left: 4px solid #16a34a;
         }
 
         .scenario.failed .scenario-header {
-            border-left: 4px solid #ef4444;
+            border-left: 4px solid #dc2626;
         }
 
         .scenario-title {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+        }
+
+        .scenario-id {
+            font-size: 0.75em;
+            font-weight: 600;
+            color: var(--acme-gray-500);
+            background: var(--acme-gray-100);
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .scenario-name {
+            font-weight: 600;
+            color: var(--acme-gray-800);
         }
 
         .status-badge {
-            padding: 4px 12px;
+            padding: 6px 14px;
             border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: 500;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
         }
 
         .status-badge.passed {
@@ -261,128 +413,305 @@ class ReportGenerator:
         .scenario-content {
             padding: 20px;
             display: none;
+            background: var(--acme-gray-50);
         }
 
         .scenario.expanded .scenario-content {
             display: block;
         }
 
-        .step {
-            padding: 15px;
-            border-left: 3px solid #ddd;
-            margin-left: 20px;
-            margin-bottom: 15px;
+        .scenario-meta {
+            display: flex;
+            gap: 24px;
+            padding: 12px 16px;
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-size: 0.85em;
         }
 
-        .step.success { border-left-color: #22c55e; }
-        .step.failure { border-left-color: #ef4444; }
+        .scenario-meta span {
+            color: var(--acme-gray-600);
+        }
+
+        .scenario-meta strong {
+            color: var(--acme-gray-800);
+        }
+
+        .steps-label {
+            font-size: 0.85em;
+            font-weight: 600;
+            color: var(--acme-gray-700);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .step {
+            padding: 16px;
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border-left: 3px solid var(--acme-gray-300);
+        }
+
+        .step.success { border-left-color: #16a34a; }
+        .step.failure { border-left-color: #dc2626; }
 
         .step-header {
-            font-weight: 500;
-            margin-bottom: 10px;
+            font-weight: 600;
+            font-size: 0.9em;
+            color: var(--acme-gray-800);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .step-number {
+            background: var(--acme-navy);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75em;
+            font-weight: 700;
         }
 
         .step-actions {
-            font-size: 0.9em;
-            color: #666;
+            font-size: 0.85em;
+            color: var(--acme-gray-600);
         }
 
         .action {
-            padding: 5px 0;
+            padding: 8px 0;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 10px;
+            border-bottom: 1px solid var(--acme-gray-100);
+        }
+
+        .action:last-child {
+            border-bottom: none;
         }
 
         .action-icon {
-            width: 20px;
-            text-align: center;
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7em;
+            flex-shrink: 0;
+        }
+
+        .action-icon.success {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .action-icon.failure {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .step-url {
+            font-size: 0.75em;
+            color: var(--acme-gray-500);
+            margin-top: 12px;
+            padding: 8px 12px;
+            background: var(--acme-gray-50);
+            border-radius: 6px;
+            font-family: monospace;
+            word-break: break-all;
         }
 
         .screenshot {
             max-width: 100%;
-            margin-top: 15px;
-            border-radius: 5px;
-            border: 1px solid #ddd;
+            margin-top: 16px;
+            border-radius: 10px;
+            border: 1px solid var(--acme-gray-200);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .failure-reason {
             background-color: #fee2e2;
             color: #991b1b;
-            padding: 10px 15px;
-            border-radius: 5px;
-            margin-top: 10px;
-            font-size: 0.9em;
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin: 12px 0;
+            font-size: 0.85em;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
         }
 
-        .footer {
-            text-align: center;
-            padding: 30px;
-            color: #666;
-            font-size: 0.85em;
+        .failure-reason i {
+            margin-top: 2px;
         }
 
         .expand-icon {
+            color: var(--acme-gray-400);
             transition: transform 0.3s;
+            font-size: 0.85em;
         }
 
         .scenario.expanded .expand-icon {
             transform: rotate(180deg);
         }
 
+        .expand-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 32px;
+            color: var(--acme-gray-500);
+            font-size: 0.8em;
+        }
+
+        .footer-brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            color: var(--acme-navy);
+            font-weight: 600;
+        }
+
         @media (max-width: 768px) {
-            .summary {
-                grid-template-columns: repeat(2, 1fr);
+            .container {
+                padding: 16px;
+            }
+            .header {
+                padding: 20px;
+            }
+            .header h1 {
+                font-size: 1.2em;
+            }
+            .header .meta {
+                grid-template-columns: 1fr;
+            }
+            .stat-card {
+                padding: 16px;
+            }
+            .stat-card .value {
+                font-size: 1.5em;
+            }
+            .scenario-header {
+                flex-wrap: wrap;
+            }
+            .scenario-meta {
+                flex-wrap: wrap;
+                gap: 12px;
             }
         }
     </style>"""
 
     def _generate_header(self, session: TestSession) -> str:
-        """Generate report header."""
+        """Generate report header with Acme branding."""
         return f"""
         <div class="header">
-            <h1>🧪 UI Testing Report</h1>
+            <div class="header-top">
+                <div class="header-logo">
+                    <i class="fas fa-flask"></i>
+                </div>
+                <div>
+                    <h1>Acme Browser Agent Report</h1>
+                    <div class="subtitle">Automated UI Testing Results</div>
+                </div>
+            </div>
             <div class="meta">
-                <strong>Task:</strong> {session.task}<br>
-                <strong>URL:</strong> {session.url}<br>
-                <strong>Session:</strong> {session.session_id}<br>
-                <strong>Duration:</strong> {session.duration_seconds:.1f} seconds
+                <div class="meta-item">
+                    <i class="fas fa-tasks"></i>
+                    <span class="meta-label">Task:</span> {session.task}
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-globe"></i>
+                    <span class="meta-label">URL:</span> {session.url}
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-fingerprint"></i>
+                    <span class="meta-label">Session:</span> {session.session_id[:20]}...
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-clock"></i>
+                    <span class="meta-label">Duration:</span> {session.duration_seconds:.1f}s
+                </div>
             </div>
         </div>"""
 
     def _generate_summary(self, session: TestSession) -> str:
-        """Generate summary statistics."""
+        """Generate summary statistics with Acme branding."""
         return f"""
         <div class="summary">
-            <div class="stat-card">
+            <div class="stat-card total">
+                <div class="stat-header">
+                    <div class="stat-icon">
+                        <i class="fas fa-list-check"></i>
+                    </div>
+                    <div class="label">Scenarios</div>
+                </div>
                 <div class="value">{session.total_scenarios}</div>
-                <div class="label">Total Scenarios</div>
             </div>
             <div class="stat-card passed">
+                <div class="stat-header">
+                    <div class="stat-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="label">Passed</div>
+                </div>
                 <div class="value">{session.passed}</div>
-                <div class="label">Passed</div>
             </div>
             <div class="stat-card failed">
+                <div class="stat-header">
+                    <div class="stat-icon">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                    <div class="label">Failed</div>
+                </div>
                 <div class="value">{session.failed}</div>
-                <div class="label">Failed</div>
             </div>
             <div class="stat-card rate">
+                <div class="stat-header">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <div class="label">Pass Rate</div>
+                </div>
                 <div class="value">{session.pass_rate:.0f}%</div>
-                <div class="label">Pass Rate</div>
             </div>
         </div>"""
 
     def _generate_scenarios(self, session: TestSession) -> str:
-        """Generate scenario sections."""
+        """Generate scenario sections with Acme branding."""
         scenarios_html = []
         for scenario in session.scenarios:
             scenarios_html.append(self._generate_scenario(scenario))
-        return "\n".join(scenarios_html)
+
+        return f"""
+        <div class="scenarios-header">
+            <i class="fas fa-vial" style="color: var(--acme-navy);"></i>
+            <h2>Test Scenarios</h2>
+            <span class="count">{len(session.scenarios)}</span>
+        </div>
+        {"".join(scenarios_html)}"""
 
     def _generate_scenario(self, scenario: TestScenario) -> str:
-        """Generate a single scenario section."""
+        """Generate a single scenario section with Acme branding."""
         status_class = "passed" if scenario.passed else "failed"
         status_text = "PASSED" if scenario.passed else "FAILED"
+        status_icon = "fa-check-circle" if scenario.passed else "fa-times-circle"
 
         steps_html = []
         for step in scenario.steps:
@@ -390,39 +719,55 @@ class ReportGenerator:
 
         failure_html = ""
         if scenario.failure_reason:
-            failure_html = f'<div class="failure-reason">❌ {scenario.failure_reason}</div>'
+            failure_html = f"""
+                <div class="failure-reason">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>{scenario.failure_reason}</span>
+                </div>"""
 
         return f"""
         <div class="scenario {status_class}">
             <div class="scenario-header" onclick="toggleScenario(this)">
                 <div class="scenario-title">
-                    <span>{scenario.scenario_id}</span>
-                    <strong>{scenario.name}</strong>
+                    <span class="scenario-id">{scenario.scenario_id}</span>
+                    <span class="scenario-name">{scenario.name}</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <span class="status-badge {status_class}">{status_text}</span>
-                    <span class="expand-icon">▼</span>
+                <div class="expand-btn">
+                    <span class="status-badge {status_class}">
+                        <i class="fas {status_icon}" style="margin-right: 4px;"></i>
+                        {status_text}
+                    </span>
+                    <i class="fas fa-chevron-down expand-icon"></i>
                 </div>
             </div>
             <div class="scenario-content">
-                <p><strong>Type:</strong> {scenario.scenario_type}</p>
-                <p><strong>Duration:</strong> {scenario.duration_ms or 0}ms</p>
+                <div class="scenario-meta">
+                    <span><i class="fas fa-tag" style="margin-right: 6px; opacity: 0.5;"></i> <strong>Type:</strong> {scenario.scenario_type}</span>
+                    <span><i class="fas fa-stopwatch" style="margin-right: 6px; opacity: 0.5;"></i> <strong>Duration:</strong> {scenario.duration_ms or 0}ms</span>
+                    <span><i class="fas fa-shoe-prints" style="margin-right: 6px; opacity: 0.5;"></i> <strong>Steps:</strong> {len(scenario.steps)}</span>
+                </div>
                 {failure_html}
-                <h4 style="margin: 20px 0 10px;">Steps</h4>
+                <div class="steps-label">
+                    <i class="fas fa-list-ol"></i>
+                    Execution Steps
+                </div>
                 {"".join(steps_html)}
             </div>
         </div>"""
 
     def _generate_step(self, step) -> str:
-        """Generate a single step section."""
+        """Generate a single step section with Acme branding."""
         status_class = "failure" if step.has_failure else "success"
 
         actions_html = []
         for action in step.actions:
-            icon = "✅" if action.success is not False else "❌"
+            icon_class = "success" if action.success is not False else "failure"
+            icon = "fa-check" if action.success is not False else "fa-times"
             actions_html.append(f"""
                 <div class="action">
-                    <span class="action-icon">{icon}</span>
+                    <div class="action-icon {icon_class}">
+                        <i class="fas {icon}"></i>
+                    </div>
                     <span>{action.get_description()}</span>
                 </div>""")
 
@@ -433,12 +778,16 @@ class ReportGenerator:
 
         return f"""
             <div class="step {status_class}">
-                <div class="step-header">Step {step.step_number + 1}: {step.goal or 'Execute actions'}</div>
+                <div class="step-header">
+                    <span class="step-number">{step.step_number + 1}</span>
+                    {step.goal or 'Execute actions'}
+                </div>
                 <div class="step-actions">
                     {"".join(actions_html)}
                 </div>
-                <div class="step-meta" style="font-size: 0.8em; color: #999; margin-top: 10px;">
-                    URL: {step.page_url}
+                <div class="step-url">
+                    <i class="fas fa-link" style="margin-right: 6px; opacity: 0.5;"></i>
+                    {step.page_url}
                 </div>
                 {screenshot_html}
             </div>"""
@@ -456,11 +805,15 @@ class ReportGenerator:
         return f'<p class="screenshot-link">Screenshot: {path}</p>'
 
     def _generate_footer(self, session: TestSession) -> str:
-        """Generate report footer."""
+        """Generate report footer with Acme branding."""
         return f"""
         <div class="footer">
-            <p>Generated by UI Testing Agent</p>
-            <p>Session: {session.session_id} | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+            <div class="footer-brand">
+                <i class="fas fa-flask"></i>
+                Acme Browser Agent
+            </div>
+            <p>Session: {session.session_id[:20]}...</p>
+            <p>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
         </div>"""
 
     def _generate_scripts(self) -> str:

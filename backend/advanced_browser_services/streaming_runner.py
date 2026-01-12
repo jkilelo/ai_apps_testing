@@ -4,7 +4,6 @@ Streaming Agent Runner
 Runs browser-use agents with real-time log streaming via SSE.
 """
 
-import asyncio
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,15 +13,13 @@ from datetime import datetime
 from browser_use import Agent
 
 from ui_testing_agent import UITestingService, OutputConfig
-from .base_service import get_gemini_llm, BrowserConfig, DEFAULT_MODEL
+from ui_testing_agent.core.browser_factory import BrowserFactory, BrowserResult
+from .base_service import get_gemini_llm, DEFAULT_MODEL
 from .streaming import (
     StreamingSession,
     create_step_callback,
-    create_done_callback,
     create_session,
     remove_session,
-    LogLevel,
-    EventType,
 )
 
 
@@ -93,26 +90,29 @@ class StreamingAgentRunner:
         session.emit_info(f"Initializing browser automation...")
         session.emit_info(f"Task: {task}")
 
-        browser = None
+        browser_result: Optional[BrowserResult] = None
         try:
             # Initialize LLM
             llm = get_gemini_llm(model=self.model, temperature=self.temperature)
             session.emit_info(f"Using model: {self.model}")
 
-            # Create browser config
-            browser_config = BrowserConfig(headless=headless)
-            browser = browser_config.create_browser()
-            session.emit_info("Browser initialized")
+            # Create browser using BrowserFactory (single source of truth)
+            browser_result = await BrowserFactory.create(headless=headless)
+            session.emit_info(f"Browser initialized (strategy: {browser_result.strategy_used})")
 
-            # Create agent with streaming callbacks
-            agent = Agent(
-                task=task,
-                llm=llm,
-                browser=browser,
-                max_actions_per_step=3,
-                register_new_step_callback=create_step_callback(session),
-                register_done_callback=create_done_callback(session),
-            )
+            # Build agent kwargs with browser based on type
+            agent_kwargs = {
+                "task": task,
+                "llm": llm,
+                "max_actions_per_step": 3,
+                "register_new_step_callback": create_step_callback(session),
+            }
+
+            # Add browser kwargs based on type from factory
+            agent_kwargs.update(BrowserFactory.get_agent_kwargs(browser_result))
+
+            # Create agent
+            agent = Agent(**agent_kwargs)
 
             session.emit_info("Agent created, starting execution...")
 
@@ -133,7 +133,7 @@ class StreamingAgentRunner:
 
             final_result = history.final_result() or "Task completed"
 
-            # Emit done event with session info
+            # Emit done event with session_id (emit_done includes it automatically)
             session.emit_done(
                 summary=final_result,
                 success=True
@@ -160,9 +160,9 @@ class StreamingAgentRunner:
             }
 
         finally:
-            if browser:
+            if browser_result:
                 try:
-                    await browser.close()
+                    await BrowserFactory.cleanup(browser_result)
                     session.emit_info("Browser closed")
                 except:
                     pass
@@ -310,6 +310,7 @@ class StreamingAgentRunner:
 
         config = OutputConfig(
             output_directory=output_dir,
+            create_session_subdir=False,  # Don't create nested subdir - we already have session-specific dir
             generate_playwright_code=True,
             generate_test_cases=True,
             generate_html_report=True,
@@ -325,27 +326,26 @@ class StreamingAgentRunner:
         )
         
         try:
-            # Create callbacks that emit to the stream
+            # Create step callback to emit progress (but NOT done_callback - we'll emit done ourselves)
             step_callback = create_step_callback(session)
-            done_callback = create_done_callback(session)
-            
+
             session.emit_info("Starting exploration and testing...")
-            
-            # Run the service with callbacks
+
+            # Run the service with step callback only
             result_session = await service.explore_and_test(
                 task=task,
-                url="about:blank", # Allow agent to navigate itself based on task, or could be extracted
+                url="about:blank", # Allow agent to navigate itself based on task
                 max_steps=max_steps,
                 step_callback=step_callback,
-                done_callback=done_callback
+                done_callback=None  # Don't pass done_callback - we emit done ourselves with session_id
             )
-            
+
             # Notify about artifacts
             session.emit_info(f"Artifacts generated in: {result_session.output_directory}")
             if result_session.html_report_path:
                 session.emit_success(f"Report available: {result_session.html_report_path}")
 
-            # Emit done event with output directory for artifact loading
+            # Emit done event with session_id and output directory for artifact loading
             session.emit_done(
                 summary="UI Testing Agent finished successfully",
                 success=True,
