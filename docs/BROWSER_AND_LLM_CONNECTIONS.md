@@ -68,14 +68,23 @@ ChatGoogle / ChatOpenAI / ChatAnthropic (based on model name)
 
 ```python
 def get_llm(model, temperature, api_key):
-    if 'gemini' in model.lower() or 'gemma' in model.lower():
-        return ChatGoogle(...)  # Uses GEMINI_API_KEY or GOOGLE_API_KEY
-    elif 'gpt' in model.lower() or 'openai' in model.lower():
-        return ChatOpenAI(...)  # Uses OPENAI_API_KEY
-    elif 'claude' in model.lower() or 'anthropic' in model.lower():
-        return ChatAnthropic(...)  # Uses ANTHROPIC_API_KEY
+    model_lower = model.lower()
+
+    if 'gemini' in model_lower or 'gemma' in model_lower:
+        # Uses GOOGLE_API_KEY (checked first) or GEMINI_API_KEY
+        return ChatGoogle(model, temperature, api_key)
+
+    elif 'gpt' in model_lower or 'openai' in model_lower:
+        # Uses OPENAI_API_KEY (via ChatOpenAI)
+        return ChatOpenAI(model, temperature)
+
+    elif 'claude' in model_lower or 'anthropic' in model_lower:
+        # Uses ANTHROPIC_API_KEY (via ChatAnthropic)
+        return ChatAnthropic(model, temperature)
+
     else:
-        return ChatGoogle(...)  # Default to Gemini
+        # Default to Gemini
+        return ChatGoogle(model, temperature, api_key)
 ```
 
 ---
@@ -92,10 +101,10 @@ def get_llm(model, temperature, api_key):
 ## Environment Variables
 
 ```bash
-# For Gemini/Gemma models
-GEMINI_API_KEY=your_key_here
-# or
+# For Gemini/Gemma models (GOOGLE_API_KEY checked first)
 GOOGLE_API_KEY=your_key_here
+# or (fallback)
+GEMINI_API_KEY=your_key_here
 
 # For OpenAI/GPT models
 OPENAI_API_KEY=your_key_here
@@ -104,5 +113,6 @@ OPENAI_API_KEY=your_key_here
 ANTHROPIC_API_KEY=your_key_here
 
 # Optional: Force specific browser strategy
-BROWSER_STRATEGY=browser_class  # or browser_session_with_start, context_manager, agent_managed
+BROWSER_STRATEGY=browser_session_with_start  # default
+# Other options: browser_class, context_manager, agent_managed
 ```
