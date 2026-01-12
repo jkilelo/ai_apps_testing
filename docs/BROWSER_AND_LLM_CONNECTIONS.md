@@ -41,27 +41,18 @@ Strategy 4: Agent-managed
 
 | File | Role | LLM Class |
 |------|------|-----------|
-| **`base_service.py`** | `get_gemini_llm()` | `ChatGoogle` |
-| **`explorer_agent.py`** | `get_llm()` | `ChatGoogle`, `ChatOpenAI`, `ChatAnthropic` |
-| `streaming_runner.py` | Uses `get_gemini_llm()` | (imports from base_service) |
+| **`llm_factory.py`** | **Single Source of Truth** | `ChatGoogle`, `ChatOpenAI`, `ChatAnthropic` |
+| `base_service.py` | Re-exports from llm_factory | (backward compatibility) |
+| `explorer_agent.py` | Uses llm_factory | `get_llm()` |
+| `streaming_runner.py` | Uses llm_factory | `get_llm()` |
 
 ### LLM Initialization Chain
 
 ```
-streaming_runner.py
+Any service (explorer_agent.py, streaming_runner.py, base_service.py)
         |
         v
-get_gemini_llm(model, temperature)  [from base_service.py]
-        |
-        v
-ChatGoogle(model=..., temperature=...)
-```
-
-```
-explorer_agent.py
-        |
-        v
-get_llm(model, temperature, api_key)  [local function]
+get_llm(model, temperature, api_key)  [from llm_factory.py]
         |
         v
 ChatGoogle / ChatOpenAI / ChatAnthropic (based on model name)
@@ -69,22 +60,22 @@ ChatGoogle / ChatOpenAI / ChatAnthropic (based on model name)
 
 ### Key Locations
 
-- **Gemini-only LLM**: `backend/advanced_browser_services/base_service.py:31` - `get_gemini_llm()`
-- **Multi-provider LLM**: `backend/ui_testing_agent/core/explorer_agent.py:37` - `get_llm()`
+- **LLM Factory**: `backend/advanced_browser_services/llm_factory.py` - `get_llm()`
+- **Deprecated alias**: `get_gemini_llm()` (calls `get_llm()` internally)
 - **Default model**: `gemini-3-pro-preview`
 
-### Model Detection Logic (explorer_agent.py)
+### Model Detection Logic (llm_factory.py)
 
 ```python
 def get_llm(model, temperature, api_key):
     if 'gemini' in model.lower() or 'gemma' in model.lower():
-        return ChatGoogle(...)
-    elif 'gpt' in model.lower():
-        return ChatOpenAI(...)
-    elif 'claude' in model.lower():
-        return ChatAnthropic(...)
+        return ChatGoogle(...)  # Uses GEMINI_API_KEY or GOOGLE_API_KEY
+    elif 'gpt' in model.lower() or 'openai' in model.lower():
+        return ChatOpenAI(...)  # Uses OPENAI_API_KEY
+    elif 'claude' in model.lower() or 'anthropic' in model.lower():
+        return ChatAnthropic(...)  # Uses ANTHROPIC_API_KEY
     else:
-        return ChatGoogle(...)  # Default
+        return ChatGoogle(...)  # Default to Gemini
 ```
 
 ---
@@ -94,18 +85,23 @@ def get_llm(model, temperature, api_key):
 | Concern | Primary File | Function |
 |---------|--------------|----------|
 | **Browser** | `browser_factory.py` | `BrowserFactory.create()` |
-| **LLM (Gemini only)** | `base_service.py` | `get_gemini_llm()` |
-| **LLM (Multi-provider)** | `explorer_agent.py` | `get_llm()` |
+| **LLM** | `llm_factory.py` | `get_llm()` |
 
 ---
 
 ## Environment Variables
 
 ```bash
-# Required for LLM
+# For Gemini/Gemma models
 GEMINI_API_KEY=your_key_here
 # or
 GOOGLE_API_KEY=your_key_here
+
+# For OpenAI/GPT models
+OPENAI_API_KEY=your_key_here
+
+# For Anthropic/Claude models
+ANTHROPIC_API_KEY=your_key_here
 
 # Optional: Force specific browser strategy
 BROWSER_STRATEGY=browser_class  # or browser_session_with_start, context_manager, agent_managed

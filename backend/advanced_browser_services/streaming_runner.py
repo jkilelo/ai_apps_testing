@@ -14,7 +14,7 @@ from browser_use import Agent
 
 from ui_testing_agent import UITestingService, OutputConfig
 from ui_testing_agent.core.browser_factory import BrowserFactory, BrowserResult
-from .base_service import get_gemini_llm, DEFAULT_MODEL
+from .llm_factory import get_llm, DEFAULT_MODEL
 from .streaming import (
     StreamingSession,
     create_step_callback,
@@ -93,7 +93,7 @@ class StreamingAgentRunner:
         browser_result: Optional[BrowserResult] = None
         try:
             # Initialize LLM
-            llm = get_gemini_llm(model=self.model, temperature=self.temperature)
+            llm = get_llm(model=self.model, temperature=self.temperature)
             session.emit_info(f"Using model: {self.model}")
 
             # Create browser using BrowserFactory (single source of truth)

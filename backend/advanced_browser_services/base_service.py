@@ -13,8 +13,6 @@ import warnings
 from dataclasses import dataclass, field
 from typing import Optional, Any, Dict
 from dotenv import load_dotenv
-from browser_use import ChatGoogle
-
 # Import BrowserFactory as the single source of truth
 from ui_testing_agent.core.browser_factory import (
     BrowserFactory,
@@ -24,29 +22,8 @@ from ui_testing_agent.core.browser_factory import (
 
 load_dotenv()
 
-# Default model to use across all services
-DEFAULT_MODEL = "gemini-3-pro-preview"
-
-
-def get_gemini_llm(model: str = DEFAULT_MODEL, temperature: float = 0.7):
-    """
-    Initialize and return a ChatGoogle LLM instance configured for browser-use.
-
-    Args:
-        model: The Gemini model to use (default: gemini-3-flash-preview)
-        temperature: Creativity/randomness of responses (0.0-1.0)
-
-    Returns:
-        ChatGoogle instance configured for browser automation
-    """
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY not found in environment variables")
-
-    return ChatGoogle(
-        model=model,
-        temperature=temperature,
-    )
+# Import LLM factory (single source of truth - no circular imports)
+from .llm_factory import get_llm, get_gemini_llm, DEFAULT_MODEL
 
 
 @dataclass
@@ -123,7 +100,7 @@ class BaseAgentService:
             temperature: LLM temperature setting
             headless: Run browser without visible window
         """
-        self.llm = get_gemini_llm(model=model, temperature=temperature)
+        self.llm = get_llm(model=model, temperature=temperature)
         self.headless = headless
         self._browser_result: Optional[BrowserResult] = None
 

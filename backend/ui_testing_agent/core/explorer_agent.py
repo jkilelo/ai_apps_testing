@@ -29,33 +29,8 @@ from ..models.test_session import TestSession
 from .step_processor import StepProcessor
 from ..prompts.qa_engineer_prompt import build_qa_system_prompt
 
-
-# Default model - can be overridden
-DEFAULT_MODEL = "gemini-3-pro-preview"
-
-
-def get_llm(model: str = DEFAULT_MODEL, temperature: float = 0.5, api_key: Optional[str] = None):
-    """
-    Get the LLM instance based on model name.
-
-    Uses browser-use's native LLM classes for compatibility.
-    """
-    # Get API key
-    api_key = api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-
-    if 'gemini' in model.lower() or 'gemma' in model.lower():
-        from browser_use.llm.google.chat import ChatGoogle
-        return ChatGoogle(model=model, temperature=temperature, api_key=api_key)
-    elif 'gpt' in model.lower():
-        from browser_use.llm.openai.chat import ChatOpenAI
-        return ChatOpenAI(model=model, temperature=temperature)
-    elif 'claude' in model.lower():
-        from browser_use.llm.anthropic.chat import ChatAnthropic
-        return ChatAnthropic(model=model, temperature=temperature)
-    else:
-        # Default to Gemini
-        from browser_use.llm.google.chat import ChatGoogle
-        return ChatGoogle(model=model, temperature=temperature, api_key=api_key)
+# Import unified LLM factory (single source of truth - no circular imports)
+from advanced_browser_services.llm_factory import get_llm, DEFAULT_MODEL
 
 
 class ExplorerAgent:

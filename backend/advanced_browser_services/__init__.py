@@ -5,7 +5,8 @@ This package provides streaming browser automation services built on top of brow
 using Google's Gemini model for AI-powered web automation with real-time SSE streaming.
 """
 
-from .base_service import get_gemini_llm, BrowserConfig, BaseAgentService, DEFAULT_MODEL
+from .llm_factory import get_llm, get_gemini_llm, DEFAULT_MODEL
+from .base_service import BrowserConfig, BaseAgentService
 from .streaming import (
     StreamingSession,
     StreamEvent,
@@ -21,7 +22,8 @@ from .streaming_runner import StreamingAgentRunner, get_streaming_runner
 
 __all__ = [
     # Base
-    "get_gemini_llm",
+    "get_llm",
+    "get_gemini_llm",  # Deprecated alias for get_llm
     "BrowserConfig",
     "BaseAgentService",
     "DEFAULT_MODEL",
