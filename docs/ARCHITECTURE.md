@@ -6,7 +6,9 @@
 2. [High-Level Architecture](#2-high-level-architecture)
 3. [Frontend Architecture](#3-frontend-architecture)
 4. [Backend Architecture](#4-backend-architecture)
-5. [BrowserFactory - Single Source of Truth](#5-browserfactory---single-source-of-truth)
+5. [Single Sources of Truth](#5-single-sources-of-truth)
+   - [BrowserFactory](#browserfactory)
+   - [LLMFactory](#llmfactory)
 6. [SSE Streaming Architecture](#6-sse-streaming-architecture)
 7. [Agent Execution Flow](#7-agent-execution-flow)
 8. [Data Flow Diagrams](#8-data-flow-diagrams)
@@ -38,8 +40,8 @@
 |                                                           |               |
 |                                                           v               |
 |                                               +-----------------------+   |
-|                                               |      GEMINI LLM       |   |
-|                                               |   (Google AI API)     |   |
+|                                               |      LLM PROVIDERS    |   |
+|                                               |  Gemini/OpenAI/Claude |   |
 |                                               +-----------------------+   |
 |                                                                           |
 +===========================================================================+
@@ -55,7 +57,7 @@
 | Backend | FastAPI (Python 3.11+) | REST API + SSE |
 | Browser Automation | browser-use 0.11.x | AI Agent Framework |
 | Browser Engine | Playwright | Chrome/Chromium Control |
-| LLM Provider | Google Gemini | AI Decision Making |
+| LLM Provider | Gemini/OpenAI/Claude | AI Decision Making |
 | Streaming | Server-Sent Events | Real-time Updates |
 
 ---
@@ -107,26 +109,28 @@
     |   |  StreamingAgentRunner  |  <-- Task Execution Engine            |
     |   +-----------+------------+                                       |
     |               |                                                    |
-    |               v                                                    |
-    |   +------------------------+                                       |
-    |   |    BrowserFactory      |  <-- SINGLE SOURCE OF TRUTH           |
-    |   |  (Browser Instantiation)|                                      |
-    |   +-----------+------------+                                       |
-    |               |                                                    |
+    |       +-------+-------+                                            |
+    |       |               |                                            |
+    |       v               v                                            |
+    |   +------------+  +------------+                                   |
+    |   |LLMFactory  |  |Browser     |  <-- SINGLE SOURCES OF TRUTH      |
+    |   |(get_llm)   |  |Factory     |                                   |
+    |   +-----+------+  +-----+------+                                   |
+    |         |               |                                          |
     +--------------------------------------------------------------------+
-                   |
-                   v
+              |               |
+              v               v
     +--------------------------------------------------------------------+
     |                    EXTERNAL DEPENDENCIES                           |
     |                                                                    |
     |   +-----------------+      +------------------+                    |
-    |   |   browser-use   |      |   Google Gemini  |                    |
-    |   |  (Agent + CDP)  |      |      LLM API     |                    |
-    |   +--------+--------+      +---------+--------+                    |
-    |            |                         |                             |
-    |            v                         |                             |
-    |   +-----------------+                |                             |
-    |   |   Playwright    |<---------------+                             |
+    |   |   browser-use   |      |   LLM Providers  |                    |
+    |   |  (Agent + CDP)  |      | Gemini/OpenAI/   |                    |
+    |   +--------+--------+      |     Claude       |                    |
+    |            |               +------------------+                    |
+    |            v                                                       |
+    |   +-----------------+                                              |
+    |   |   Playwright    |                                              |
     |   | (Chrome Driver) |                                              |
     |   +-----------------+                                              |
     |                                                                    |
@@ -248,19 +252,30 @@
                     |
                     v
     +-------------------------------+     +-------------------------------+
-    |       UITestingService        |     |       BrowserFactory          |
-    |   (Artifact Generation)       |     |  (SINGLE SOURCE OF TRUTH)     |
-    +-------------------------------+     +-------------------------------+
-    |                               |     |                               |
-    | - explore_and_test()          |     | - create() -> BrowserResult   |
-    | - Generates:                  |     | - cleanup()                   |
-    |   - Screenshots               |     | - get_agent_kwargs()          |
-    |   - HTML/JSON Reports         |     |                               |
-    |   - Playwright Tests          |     | Strategies:                   |
-    |   - GIF Recording             |     | 1. browser_session_with_start |
-    |                               |     | 2. browser_class              |
-    +---------------+---------------+     | 3. context_manager            |
-                    |                     | 4. agent_managed              |
+    |       UITestingService        |     |      SINGLE SOURCES OF TRUTH  |
+    |   (Artifact Generation)       |     +-------------------------------+
+    +-------------------------------+     |                               |
+    |                               |     |  +-------------------------+  |
+    | - explore_and_test()          |     |  |     LLMFactory          |  |
+    | - Generates:                  |     |  |     (llm_factory.py)    |  |
+    |   - Screenshots               |     |  +-------------------------+  |
+    |   - HTML/JSON Reports         |     |  | get_llm() -> LLM        |  |
+    |   - Playwright Tests          |     |  | Supports:               |  |
+    |   - GIF Recording             |     |  | - Gemini/Gemma          |  |
+    |                               |     |  | - GPT/OpenAI            |  |
+    +---------------+---------------+     |  | - Claude/Anthropic      |  |
+                    |                     |  +-------------------------+  |
+                    |                     |                               |
+                    |                     |  +-------------------------+  |
+                    |                     |  |    BrowserFactory       |  |
+                    |                     |  |   (browser_factory.py)  |  |
+                    |                     |  +-------------------------+  |
+                    |                     |  | create() -> Browser     |  |
+                    |                     |  | cleanup()               |  |
+                    |                     |  | get_agent_kwargs()      |  |
+                    |                     |  | 4 fallback strategies   |  |
+                    |                     |  +-------------------------+  |
+                    |                     |                               |
                     v                     +-------------------------------+
     +-------------------------------+
     |        ExplorerAgent          |
@@ -271,6 +286,7 @@
     | - Records all steps           |
     | - Processes into TestSession  |
     | - Uses BrowserFactory         |
+    | - Uses LLMFactory             |
     |                               |
     +-------------------------------+
 ```
@@ -281,7 +297,8 @@
 |-----------|------|---------|
 | FastAPI App | `main.py` | HTTP/SSE endpoints |
 | StreamingAgentRunner | `streaming_runner.py` | Task execution with SSE |
-| BrowserFactory | `browser_factory.py` | Browser instantiation |
+| **LLMFactory** | `llm_factory.py` | **LLM instantiation (single source of truth)** |
+| **BrowserFactory** | `browser_factory.py` | **Browser instantiation (single source of truth)** |
 | UITestingService | `service.py` | Artifact generation |
 | ExplorerAgent | `explorer_agent.py` | QA-focused browser-use wrapper |
 | StepProcessor | `step_processor.py` | History processing |
@@ -290,7 +307,67 @@
 
 ---
 
-## 5. BrowserFactory - Single Source of Truth
+## 5. Single Sources of Truth
+
+The platform has two factory patterns that serve as single sources of truth:
+- **LLMFactory** - All LLM instantiation
+- **BrowserFactory** - All browser instantiation
+
+### LLMFactory
+
+**File:** `backend/advanced_browser_services/llm_factory.py`
+
+```
++============================================================================+
+|                        LLM FACTORY ARCHITECTURE                            |
++============================================================================+
+
+    All LLM instantiation flows through get_llm()
+
+    +--------------------------------------------------------------------+
+    |                           get_llm()                                 |
+    +--------------------------------------------------------------------+
+    |  get_llm(model, temperature, api_key) -> LLM                       |
+    +--------------------------------------------------------------------+
+                               |
+           +-------------------+-------------------+
+           |                   |                   |
+           v                   v                   v
+    +---------------+   +---------------+   +---------------+
+    | "gemini" or   |   | "gpt" or      |   | "claude" or   |
+    | "gemma"       |   | "openai"      |   | "anthropic"   |
+    +-------+-------+   +-------+-------+   +-------+-------+
+            |                   |                   |
+            v                   v                   v
+    +---------------+   +---------------+   +---------------+
+    |  ChatGoogle   |   |  ChatOpenAI   |   | ChatAnthropic |
+    +---------------+   +---------------+   +---------------+
+```
+
+#### Usage
+
+```python
+from advanced_browser_services.llm_factory import get_llm
+
+# Automatically detects provider from model name
+llm = get_llm(model="gemini-3-pro-preview")  # -> ChatGoogle
+llm = get_llm(model="gpt-4o")                # -> ChatOpenAI
+llm = get_llm(model="claude-3-opus")         # -> ChatAnthropic
+```
+
+#### Environment Variables
+
+| Model Type | Environment Variable |
+|------------|---------------------|
+| Gemini/Gemma | `GEMINI_API_KEY` or `GOOGLE_API_KEY` |
+| GPT/OpenAI | `OPENAI_API_KEY` |
+| Claude/Anthropic | `ANTHROPIC_API_KEY` |
+
+---
+
+### BrowserFactory
+
+**File:** `backend/ui_testing_agent/core/browser_factory.py`
 
 ```
 +============================================================================+
@@ -348,7 +425,7 @@
     +--------------------------------------------------------------------+
 ```
 
-### Why BrowserFactory?
+#### Why BrowserFactory?
 
 | Problem | Solution |
 |---------|----------|
@@ -663,7 +740,8 @@ ai_apps_testing/
 │   │
 │   ├── advanced_browser_services/
 │   │   ├── __init__.py             # Package exports
-│   │   ├── base_service.py         # LLM + BaseAgentService
+│   │   ├── llm_factory.py          # LLMFactory (SINGLE SOURCE OF TRUTH)
+│   │   ├── base_service.py         # BaseAgentService
 │   │   ├── streaming.py            # SSE infrastructure
 │   │   └── streaming_runner.py     # StreamingAgentRunner
 │   │
@@ -711,16 +789,18 @@ ai_apps_testing/
 
 This architecture provides:
 
-1. **Single Source of Truth** - BrowserFactory handles all browser instantiation
-2. **Real-time Updates** - SSE streaming for live progress
-3. **Artifact Generation** - Automated screenshots, reports, and Playwright tests
-4. **Session Management** - History, comparison, and re-run capabilities
-5. **Graceful Fallback** - Multiple browser initialization strategies
+1. **Single Sources of Truth** - LLMFactory for LLM, BrowserFactory for browsers
+2. **Multi-Provider LLM Support** - Gemini, OpenAI, and Anthropic from one interface
+3. **Real-time Updates** - SSE streaming for live progress
+4. **Artifact Generation** - Automated screenshots, reports, and Playwright tests
+5. **Session Management** - History, comparison, and re-run capabilities
+6. **Graceful Fallback** - Multiple browser initialization strategies
 
 ### Key Design Decisions
 
 | Decision | Rationale |
 |----------|-----------|
+| LLMFactory pattern | Unified LLM creation supporting multiple providers |
 | BrowserFactory pattern | Centralized browser creation with graceful fallback |
 | SSE over WebSocket | Simpler, unidirectional, sufficient for progress updates |
 | Streaming-first API | All tasks stream progress in real-time |
