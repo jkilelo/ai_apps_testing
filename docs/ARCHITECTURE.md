@@ -1,4 +1,4 @@
-# Advanced Browser Services - Architecture Design
+# AI Apps Testing Platform - Architecture
 
 ## Table of Contents
 
@@ -6,7 +6,7 @@
 2. [High-Level Architecture](#2-high-level-architecture)
 3. [Frontend Architecture](#3-frontend-architecture)
 4. [Backend Architecture](#4-backend-architecture)
-5. [Service Layer Design](#5-service-layer-design)
+5. [BrowserFactory - Single Source of Truth](#5-browserfactory---single-source-of-truth)
 6. [SSE Streaming Architecture](#6-sse-streaming-architecture)
 7. [Agent Execution Flow](#7-agent-execution-flow)
 8. [Data Flow Diagrams](#8-data-flow-diagrams)
@@ -85,7 +85,7 @@
     |                       |                                            |
     |                       v                                            |
     |            +---------------------+                                 |
-    |            |   geminiService.ts  |  <-- API Client Layer           |
+    |            |   API Client Layer  |                                 |
     |            |  (HTTP + SSE Client)|                                 |
     |            +----------+----------+                                 |
     |                       |                                            |
@@ -102,23 +102,17 @@
     |   |  (API Router Layer)    |                                       |
     |   +-----------+------------+                                       |
     |               |                                                    |
-    |       +-------+-------+                                            |
-    |       |               |                                            |
-    |       v               v                                            |
-    |   +--------+    +-------------+                                    |
-    |   |Advanced|    | Streaming   |                                    |
-    |   |Browser |    | Runner      |                                    |
-    |   |Service |    | (SSE)       |                                    |
-    |   +---+----+    +------+------+                                    |
-    |       |                |                                           |
-    |       +-------+--------+                                           |
+    |               v                                                    |
+    |   +------------------------+                                       |
+    |   |  StreamingAgentRunner  |  <-- Task Execution Engine            |
+    |   +-----------+------------+                                       |
     |               |                                                    |
     |               v                                                    |
-    |   +---------------------+                                          |
-    |   | advanced_browser_   |                                          |
-    |   |     services/       |  <-- Service Layer                       |
-    |   +----------+----------+                                          |
-    |              |                                                     |
+    |   +------------------------+                                       |
+    |   |    BrowserFactory      |  <-- SINGLE SOURCE OF TRUTH           |
+    |   |  (Browser Instantiation)|                                      |
+    |   +-----------+------------+                                       |
+    |               |                                                    |
     +--------------------------------------------------------------------+
                    |
                    v
@@ -189,59 +183,18 @@
     +----------------------------------------------------------+
 ```
 
-### Frontend Service Layer
+### Frontend Components
 
-```
-+============================================================================+
-|                       geminiService.ts - API CLIENT                        |
-+============================================================================+
-
-    +-----------------------------------------------------------------+
-    |                      SYNCHRONOUS APIs                            |
-    |  (Request/Response - Returns complete result)                    |
-    +-----------------------------------------------------------------+
-    |                                                                  |
-    |   runUIAutomator()      POST /run-ui-automator                   |
-    |   extractData()         POST /extract-data                       |
-    |   researchTopic()       POST /research-topic                     |
-    |   compareProducts()     POST /compare-products                   |
-    |   runParallelTasks()    POST /run-parallel-tasks                 |
-    |   comparePages()        POST /compare-pages                      |
-    |                                                                  |
-    +-----------------------------------------------------------------+
-
-    +-----------------------------------------------------------------+
-    |                      STREAMING APIs (SSE)                        |
-    |  (Real-time events via Server-Sent Events)                       |
-    +-----------------------------------------------------------------+
-    |                                                                  |
-    |   streamBasicTask()         POST /stream/basic-task              |
-    |   streamExtractData()       POST /stream/extract-data            |
-    |   streamResearchTopic()     POST /stream/research-topic          |
-    |   streamCompareProducts()   POST /stream/compare-products        |
-    |   streamComparePages()      POST /stream/compare-pages           |
-    |                                                                  |
-    |   createStreamingConnection()  <-- Core SSE Handler              |
-    |      |                                                           |
-    |      +-- Handles: data: {json}\n\n format                        |
-    |      +-- Parses: StreamingEvent objects                          |
-    |      +-- Detects: 'done' event for completion                    |
-    |      +-- Returns: cleanup() function for abort                   |
-    |                                                                  |
-    +-----------------------------------------------------------------+
-
-    +-----------------------------------------------------------------+
-    |                      ARTIFACTS APIs                              |
-    |  (Session data and generated files)                              |
-    +-----------------------------------------------------------------+
-    |                                                                  |
-    |   getSessionArtifacts()     GET /artifacts/{session_id}          |
-    |   getArtifactUrl()          GET /artifacts/{id}/file/{path}      |
-    |   getPlaywrightCode()       GET /artifacts/{id}/code             |
-    |   listSessions()            GET /sessions                        |
-    |                                                                  |
-    +-----------------------------------------------------------------+
-```
+| Component | Purpose |
+|-----------|---------|
+| `UIAutomator.tsx` | Main application container |
+| `LogViewer.tsx` | Real-time streaming terminal |
+| `TestResultsPanel.tsx` | Test summary and step display |
+| `ArtifactsViewer.tsx` | Screenshots, code, reports viewer |
+| `SessionBrowser.tsx` | Browse and reload past sessions |
+| `SessionComparison.tsx` | Compare two test sessions |
+| `Toast.tsx` | Notification toasts |
+| `Sidebar.tsx` | Navigation sidebar |
 
 ---
 
@@ -257,170 +210,152 @@
     |====================================================================|
     |                                                                    |
     |   +-----------------------------+  +-----------------------------+ |
-    |   |     REST API ENDPOINTS      |  |    SSE STREAMING ENDPOINTS  | |
+    |   |    SSE STREAMING ENDPOINTS  |  |    ARTIFACTS ENDPOINTS       | |
     |   +-----------------------------+  +-----------------------------+ |
-    |   | POST /run-ui-automator      |  | POST /stream/basic-task     | |
-    |   | POST /extract-data          |  | POST /stream/extract-data   | |
-    |   | POST /research-topic        |  | POST /stream/research-topic | |
-    |   | POST /compare-products      |  | POST /stream/compare-*      | |
-    |   | POST /run-parallel-tasks    |  +-----------------------------+ |
-    |   | POST /compare-pages         |                                  |
+    |   | POST /stream/basic-task     |  | GET /artifacts/{id}         | |
+    |   | POST /stream/extract-data   |  | GET /artifacts/{id}/file/*  | |
+    |   | POST /stream/research-topic |  | GET /artifacts/{id}/code    | |
+    |   | POST /stream/compare-*      |  | GET /sessions               | |
     |   +-----------------------------+  +-----------------------------+ |
-    |                                    |    ARTIFACTS ENDPOINTS       | |
-    |   +-----------------------------+  +-----------------------------+ |
-    |   |    GLOBAL INSTANCES         |  | GET /artifacts/{id}         | |
-    |   +-----------------------------+  | GET /artifacts/{id}/file/*  | |
-    |   | advanced_service            |  | GET /artifacts/{id}/code    | |
-    |   |   = AdvancedBrowserService()|  | GET /sessions               | |
-    |   |                             |  +-----------------------------+ |
-    |   | streaming_runner            |                                  |
-    |   |   = get_streaming_runner()  |                                  |
-    |   +-----------------------------+                                  |
+    |                                                                    |
+    |   +------------------------------------------------------------+   |
+    |   |               GLOBAL INSTANCE                               |   |
+    |   +------------------------------------------------------------+   |
+    |   | streaming_runner = get_streaming_runner()                   |   |
+    |   +------------------------------------------------------------+   |
     |                                                                    |
     +====================================================================+
                             |
                             v
     +====================================================================+
-    |                   SERVICE LAYER COMPONENTS                         |
+    |                   SERVICE LAYER                                    |
     +====================================================================+
 
-    +---------------------------+     +-------------------------------+
-    |   AdvancedBrowserService  |     |    StreamingAgentRunner       |
-    |       (Facade)            |     |        (SSE Engine)           |
-    +---------------------------+     +-------------------------------+
-    |                           |     |                               |
-    | - run_task()              |     | - create_session()            |
-    | - extract_data()          |     | - run_basic_task()            |
-    | - research_topic()        |     | - run_data_extraction()       |
-    | - compare_products()      |     | - run_research()              |
-    | - compare_pages()         |     | - run_product_comparison()    |
-    | - run_parallel_tasks()    |     | - run_page_comparison()       |
-    |                           |     | - run_ui_testing_agent_task() |
-    +-------------+-------------+     +---------------+---------------+
-                  |                                   |
-                  +----------------+------------------+
-                                   |
-                                   v
-    +====================================================================+
-    |                    SPECIALIZED AGENTS                              |
-    +====================================================================+
-
-    +-----------------+  +-------------------+  +----------------------+
-    |  MultiTabAgent  |  |  ParallelAgent    |  |   ResearchAgent      |
-    |                 |  |     Runner        |  |                      |
-    +-----------------+  +-------------------+  +----------------------+
-    | - run()         |  | - run_parallel()  |  | - research_topic()   |
-    | - compare_pages |  | - run_same_task   |  | - compare_products() |
-    |                 |  |   _on_sites()     |  | - fact_check()       |
-    |                 |  | - batch_search()  |  |                      |
-    +-----------------+  +-------------------+  +----------------------+
-           |                    |                        |
-           +--------------------+------------------------+
-                               |
-                               v
-    +-----------------+  +-------------------------------------------+
-    | DataExtraction  |  |              BaseAgentService             |
-    |     Agent       |  +-------------------------------------------+
-    +-----------------+  | - llm: ChatGoogle                         |
-    | - extract()     |  | - browser_config: BrowserConfig           |
-    | - extract_to    |  | - browser: Browser                        |
-    |   _file()       |  | - _ensure_browser()                       |
-    | - extract_from  |  | - close()                                 |
-    |   _multiple_    |  +-------------------------------------------+
-    |   urls()        |               ^
-    +-----------------+               |
-                                      |
-    +====================================================================+
-    |                       BASE CONFIGURATION                           |
-    +====================================================================+
-
-    +----------------------------+    +--------------------------------+
-    |      get_gemini_llm()      |    |        BrowserConfig           |
-    +----------------------------+    +--------------------------------+
-    | Creates ChatGoogle         |    | - headless: bool               |
-    | instance with:             |    | - disable_security: bool       |
-    | - model name               |    | - window_width/height: int     |
-    | - temperature              |    | - user_data_dir: str           |
-    | - API key from env         |    | - allowed_domains: list        |
-    +----------------------------+    | - create_browser() -> Browser  |
-                                      +--------------------------------+
+    +-------------------------------+
+    |    StreamingAgentRunner       |
+    |        (SSE Engine)           |
+    +-------------------------------+
+    |                               |
+    | - create_session()            |
+    | - run_basic_task()            |
+    | - run_ui_testing_agent_task() |
+    | - run_data_extraction()       |
+    | - run_research()              |
+    | - run_product_comparison()    |
+    | - run_page_comparison()       |
+    |                               |
+    +---------------+---------------+
+                    |
+                    v
+    +-------------------------------+     +-------------------------------+
+    |       UITestingService        |     |       BrowserFactory          |
+    |   (Artifact Generation)       |     |  (SINGLE SOURCE OF TRUTH)     |
+    +-------------------------------+     +-------------------------------+
+    |                               |     |                               |
+    | - explore_and_test()          |     | - create() -> BrowserResult   |
+    | - Generates:                  |     | - cleanup()                   |
+    |   - Screenshots               |     | - get_agent_kwargs()          |
+    |   - HTML/JSON Reports         |     |                               |
+    |   - Playwright Tests          |     | Strategies:                   |
+    |   - GIF Recording             |     | 1. browser_session_with_start |
+    |                               |     | 2. browser_class              |
+    +---------------+---------------+     | 3. context_manager            |
+                    |                     | 4. agent_managed              |
+                    v                     +-------------------------------+
+    +-------------------------------+
+    |        ExplorerAgent          |
+    |   (browser-use wrapper)       |
+    +-------------------------------+
+    |                               |
+    | - Injects QA system prompt    |
+    | - Records all steps           |
+    | - Processes into TestSession  |
+    | - Uses BrowserFactory         |
+    |                               |
+    +-------------------------------+
 ```
+
+### Key Backend Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| FastAPI App | `main.py` | HTTP/SSE endpoints |
+| StreamingAgentRunner | `streaming_runner.py` | Task execution with SSE |
+| BrowserFactory | `browser_factory.py` | Browser instantiation |
+| UITestingService | `service.py` | Artifact generation |
+| ExplorerAgent | `explorer_agent.py` | QA-focused browser-use wrapper |
+| StepProcessor | `step_processor.py` | History processing |
+| ReportGenerator | `report_generator.py` | HTML/JSON report generation |
+| PlaywrightGenerator | `playwright_generator.py` | Test code generation |
 
 ---
 
-## 5. Service Layer Design
+## 5. BrowserFactory - Single Source of Truth
 
 ```
 +============================================================================+
-|                      SERVICE INHERITANCE HIERARCHY                         |
+|                      BROWSER FACTORY ARCHITECTURE                          |
 +============================================================================+
 
-                            +-------------------+
-                            | BaseAgentService  |
-                            +-------------------+
-                            | # llm             |
-                            | # browser_config  |
-                            | # browser         |
-                            +-------------------+
-                            | + _ensure_browser |
-                            | + close()         |
-                            +--------+----------+
-                                     |
-            +------------------------+------------------------+
-            |                        |                        |
-            v                        v                        v
-    +---------------+      +------------------+      +------------------+
-    | MultiTabAgent |      |  ResearchAgent   |      | DataExtraction   |
-    +---------------+      +------------------+      |     Agent        |
-    | + max_tabs    |      | + tools          |      +------------------+
-    +---------------+      | + _research_notes|      | + tools          |
-    | + run()       |      | + _sources       |      | + _extracted_    |
-    | + compare_    |      +------------------+      |   data           |
-    |   pages()     |      | + research_topic |      +------------------+
-    +---------------+      | + compare_       |      | + extract()      |
-                           |   products()     |      | + extract_to_    |
-                           | + fact_check()   |      |   file()         |
-                           +------------------+      | + extract_from_  |
-                                                     |   multiple_urls()|
-                                                     +------------------+
+    All browser instantiation flows through BrowserFactory
 
-
-+============================================================================+
-|                         PARALLEL AGENT RUNNER                              |
-+============================================================================+
-
-    +-----------------------------------------------------------------------+
-    |                        ParallelAgentRunner                            |
-    +-----------------------------------------------------------------------+
-    |                                                                       |
-    |    +-------------+      +--------------+      +-------------+         |
-    |    |  AgentTask  |      |  AgentTask   |      |  AgentTask  |         |
-    |    | task_id: 1  |      | task_id: 2   |      | task_id: 3  |         |
-    |    +------+------+      +------+-------+      +------+------+         |
-    |           |                    |                     |                |
-    |           +--------------------+---------------------+                |
-    |                                |                                      |
-    |                                v                                      |
-    |                   +------------------------+                          |
-    |                   |  asyncio.Semaphore(3)  |  <-- max_concurrent      |
-    |                   +------------------------+                          |
-    |                                |                                      |
-    |           +--------------------+---------------------+                |
-    |           |                    |                     |                |
-    |           v                    v                     v                |
-    |    +------------+       +------------+        +------------+          |
-    |    | Browser 1  |       | Browser 2  |        | Browser 3  |          |
-    |    | + Agent 1  |       | + Agent 2  |        | + Agent 3  |          |
-    |    +-----+------+       +-----+------+        +-----+------+          |
-    |          |                    |                     |                 |
-    |          v                    v                     v                 |
-    |    +------------+       +------------+        +------------+          |
-    |    |AgentResult |       |AgentResult |        |AgentResult |          |
-    |    +------------+       +------------+        +------------+          |
-    |                                                                       |
-    |    Results collected via asyncio.gather()                             |
-    +-----------------------------------------------------------------------+
+    +--------------------------------------------------------------------+
+    |                         BrowserFactory                              |
+    +--------------------------------------------------------------------+
+    |                                                                    |
+    |   +------------------------------------------------------------+   |
+    |   |              create(headless, config) -> BrowserResult      |   |
+    |   +------------------------------------------------------------+   |
+    |                               |                                    |
+    |           +-------------------+-------------------+                |
+    |           |                   |                   |                |
+    |           v                   v                   v                |
+    |   +---------------+   +---------------+   +---------------+        |
+    |   | Strategy 1    |   | Strategy 2    |   | Strategy 3    |        |
+    |   | BrowserSession|   | Browser Class |   | Context Mgr   |        |
+    |   | + start()     |   | (Simple API)  |   | __aenter__    |        |
+    |   +-------+-------+   +-------+-------+   +-------+-------+        |
+    |           |                   |                   |                |
+    |           | fail?             | fail?             | fail?          |
+    |           +-------------------+-------------------+                |
+    |                               |                                    |
+    |                               v                                    |
+    |                       +---------------+                            |
+    |                       | Strategy 4    |                            |
+    |                       | Agent Managed |                            |
+    |                       | (No browser)  |                            |
+    |                       +---------------+                            |
+    |                                                                    |
+    +--------------------------------------------------------------------+
+                               |
+                               v
+    +--------------------------------------------------------------------+
+    |                        BrowserResult                                |
+    +--------------------------------------------------------------------+
+    |  browser: Any              # BrowserSession | Browser | None       |
+    |  browser_type: str         # "browser_session" | "browser" | ...   |
+    |  strategy_used: str        # Which strategy succeeded              |
+    +--------------------------------------------------------------------+
+                               |
+                               v
+    +--------------------------------------------------------------------+
+    |                     get_agent_kwargs(result)                        |
+    +--------------------------------------------------------------------+
+    |  Returns:                                                          |
+    |  - {"browser_session": session} if browser_session type            |
+    |  - {"browser": browser} if browser type                            |
+    |  - {} if agent_managed                                             |
+    +--------------------------------------------------------------------+
 ```
+
+### Why BrowserFactory?
+
+| Problem | Solution |
+|---------|----------|
+| CDP client not initialized errors | Graceful fallback to working strategy |
+| Multiple instantiation patterns | Single source of truth |
+| Inconsistent cleanup | Centralized `cleanup()` method |
+| Hard to debug browser issues | One place for logging |
 
 ---
 
@@ -444,152 +379,64 @@
              |                                       |
              |                         +-------------v-------------+
              |                         |  Create StreamingSession  |
-             |                         |  session = create_session |
              |                         +-------------+-------------+
              |                                       |
              |                         +-------------v-------------+
              |                         | Start Task (asyncio.task) |
-             |                         | run_ui_testing_agent_task |
              |                         +-------------+-------------+
              |                                       |
              |                         +-------------v-------------+
              |                         |  Return StreamingResponse |
-             |                         |  media_type=text/event-   |
-             |                         |           stream          |
              |<--------------------------------------|
              |                                       |
     +--------v---------+                             |
     | Open SSE Reader  |                             |
-    | response.body.   |                             |
-    |   getReader()    |                             |
     +--------+---------+                             |
              |                                       |
              |         2. SSE Events (continuous)    |
              |<======================================|
              |                                       |
-             |  data: {"type":"step_start",...}\n\n  |
+             |  data: {"type":"step_start",...}      |
              |<--------------------------------------|
              |                                       |
     +--------v---------+                             |
-    |  Parse & Dispatch|                             |
-    |  onEvent(data)   |                             |
+    |  Parse & Update  |                             |
+    |  LogViewer UI    |                             |
     +--------+---------+                             |
              |                                       |
-             |  data: {"type":"step_action",...}\n\n |
-             |<--------------------------------------|
-             |                                       |
-    +--------v---------+                             |
-    | Update LogViewer |                             |
-    | Add log entry    |                             |
-    +--------+---------+                             |
-             |                                       |
-             |  data: {"type":"done",...}\n\n        |
+             |  data: {"type":"done",...}            |
              |<--------------------------------------|
              |                                       |
     +--------v---------+               +-------------v-------------+
     | onComplete()     |               |   cleanup_session()       |
-    | Close connection |               |   Remove from registry    |
     +------------------+               +---------------------------+
 ```
 
 ### StreamEvent Structure
 
-```
-+============================================================================+
-|                          STREAM EVENT TYPES                                |
-+============================================================================+
-
-    +------------------------------------------------------------------+
-    |                      StreamEvent (Dataclass)                      |
-    +------------------------------------------------------------------+
-    |  event_type: EventType    # Type of event                        |
-    |  level: LogLevel          # Severity (info/success/warn/error)   |
-    |  message: str             # Human-readable message               |
-    |  timestamp: str           # ISO format datetime                  |
-    |  data: Optional[Dict]     # Additional structured data           |
-    |  step_number: Optional    # Current step number                  |
-    +------------------------------------------------------------------+
-
-    EVENT TYPES                          LOG LEVELS
-    ===========                          ==========
-
-    +----------------+                   +-----------+
-    | step_start     | New step begins   | info      |
-    | step_thinking  | Agent reasoning   | success   |
-    | step_action    | Action executing  | warn      |
-    | step_result    | Action outcome    | error     |
-    | browser_state  | URL/title update  | debug     |
-    | progress       | General progress  +-----------+
-    | error          | Error occurred    |
-    | done           | Task completed    |
-    +----------------+
-
-    SSE WIRE FORMAT
-    ===============
-
-    data: {"type":"step_start","level":"info","message":"Starting step 1","timestamp":"2024-01-09T10:30:00","step":1}\n\n
-    data: {"type":"step_action","level":"info","message":"Executing: click","timestamp":"2024-01-09T10:30:01","step":1,"data":{"action":"click","params":{"element":"button"}}}\n\n
-    data: {"type":"done","level":"success","message":"Task completed","timestamp":"2024-01-09T10:30:30","data":{"success":true,"total_steps":5}}\n\n
+```python
+@dataclass
+class StreamEvent:
+    event_type: EventType    # step_start, step_action, done, etc.
+    level: LogLevel          # info, success, warn, error, debug
+    message: str             # Human-readable message
+    timestamp: str           # ISO format datetime
+    data: Optional[Dict]     # Additional structured data
+    step_number: Optional    # Current step number
 ```
 
-### Callback Integration with browser-use
+### Event Types
 
-```
-+============================================================================+
-|                    BROWSER-USE CALLBACK INTEGRATION                        |
-+============================================================================+
-
-    +---------------------+
-    |   browser-use       |
-    |      Agent          |
-    +----------+----------+
-               |
-               | Agent.run(max_steps=30)
-               |
-               v
-    +----------+----------+
-    |   For each step:    |
-    |   1. Think          |
-    |   2. Decide action  |
-    |   3. Execute        |
-    +----------+----------+
-               |
-               | register_new_step_callback
-               |
-               v
-    +------------------------------+
-    |  create_step_callback()      |
-    +------------------------------+
-    |                              |
-    |  async def step_callback(    |
-    |      browser_state,          |  <-- Current page state
-    |      agent_output,           |  <-- Agent's decision
-    |      step_num                |  <-- Step number
-    |  ):                          |
-    |      session.emit_step_start |
-    |      session.emit_browser_   |
-    |              state           |
-    |      session.emit_thinking   |
-    |      session.emit_action     |
-    |                              |
-    +------------------------------+
-               |
-               | On completion
-               v
-    +------------------------------+
-    |  create_done_callback()      |
-    +------------------------------+
-    |                              |
-    |  async def done_callback(    |
-    |      history                 |  <-- Full AgentHistoryList
-    |  ):                          |
-    |      session.emit_done(      |
-    |          summary,            |
-    |          success             |
-    |      )                       |
-    |                              |
-    +------------------------------+
-```
+| Event | Description |
+|-------|-------------|
+| `step_start` | New step beginning |
+| `step_thinking` | Agent's reasoning |
+| `step_action` | Action being executed |
+| `step_result` | Action outcome |
+| `browser_state` | Current URL/title |
+| `progress` | General progress |
+| `error` | Error occurred |
+| `done` | Task completed |
 
 ---
 
@@ -600,118 +447,92 @@
 |                      COMPLETE AGENT EXECUTION FLOW                         |
 +============================================================================+
 
-    User Request: "Search Google for Python tutorials"
+    User Request: "Test the login functionality on example.com"
 
     [1] FRONTEND
-    +-----------------------------------------------------------------+
-    |  UIAutomator.tsx                                                |
-    |  +-----------------------------------------------------------+  |
-    |  |  User clicks "Run" button                                 |  |
-    |  |  handleRunTask() called                                   |  |
-    |  |  streamBasicTask(task, onEvent, onError, onComplete)      |  |
-    |  +-----------------------------------------------------------+  |
-    +-----------------------------------------------------------------+
+    +-------------------------------------------------------------------+
+    |  UIAutomator.tsx                                                  |
+    |  User clicks "Run" -> POST /stream/basic-task                     |
+    +-------------------------------------------------------------------+
                               |
                               v
-    [2] HTTP REQUEST
-    +-----------------------------------------------------------------+
-    |  POST /stream/basic-task                                        |
-    |  Content-Type: application/json                                 |
-    |  Body: {"task": "Search Google...", "max_steps": 30}            |
-    +-----------------------------------------------------------------+
+    [2] FASTAPI ENDPOINT
+    +-------------------------------------------------------------------+
+    |  main.py: stream_basic_task()                                     |
+    |  -> Creates StreamingSession                                      |
+    |  -> Returns StreamingResponse                                     |
+    +-------------------------------------------------------------------+
                               |
                               v
-    [3] FASTAPI ENDPOINT (main.py)
-    +-----------------------------------------------------------------+
-    |  @app.post("/stream/basic-task")                                |
-    |  async def stream_basic_task(request):                          |
-    |      session = streaming_runner.create_session()                |
-    |      return StreamingResponse(event_generator())                |
-    +-----------------------------------------------------------------+
+    [3] STREAMING RUNNER
+    +-------------------------------------------------------------------+
+    |  run_ui_testing_agent_task()                                      |
+    |  1. Save metadata.json                                            |
+    |  2. Create OutputConfig                                           |
+    |  3. Create UITestingService                                       |
+    |  4. Call service.explore_and_test()                               |
+    +-------------------------------------------------------------------+
                               |
                               v
-    [4] STREAMING RUNNER
-    +-----------------------------------------------------------------+
-    |  run_ui_testing_agent_task()                                    |
-    |  +-----------------------------------------------------------+  |
-    |  |  1. Save metadata.json (task, timestamp)                  |  |
-    |  |  2. Create OutputConfig (screenshots, reports, etc.)      |  |
-    |  |  3. Create UITestingService                               |  |
-    |  |  4. Create step/done callbacks                            |  |
-    |  |  5. Call service.explore_and_test()                       |  |
-    |  +-----------------------------------------------------------+  |
-    +-----------------------------------------------------------------+
+    [4] UI TESTING SERVICE
+    +-------------------------------------------------------------------+
+    |  explore_and_test(task, url, max_steps)                           |
+    |  -> Creates ExplorerAgent                                         |
+    |  -> Runs agent                                                    |
+    |  -> Generates artifacts                                           |
+    +-------------------------------------------------------------------+
                               |
                               v
-    [5] UI TESTING SERVICE (explorer_agent.py)
-    +-----------------------------------------------------------------+
-    |  explore_and_test(task, url, max_steps)                         |
-    |  +-----------------------------------------------------------+  |
-    |  |  1. Create BrowserProfile(headless=False)                 |  |
-    |  |  2. Create BrowserSession                                 |  |
-    |  |  3. Build QA system prompt                                |  |
-    |  |  4. Create browser-use Agent                              |  |
-    |  |  5. agent.run(max_steps=30)                               |  |
-    |  +-----------------------------------------------------------+  |
-    +-----------------------------------------------------------------+
+    [5] EXPLORER AGENT
+    +-------------------------------------------------------------------+
+    |  ExplorerAgent.explore_and_test()                                 |
+    |  1. BrowserFactory.create() -> Get browser                        |
+    |  2. Build QA system prompt                                        |
+    |  3. Create browser-use Agent                                      |
+    |  4. agent.run(max_steps)                                          |
+    |  5. Process history into TestSession                              |
+    |  6. BrowserFactory.cleanup()                                      |
+    +-------------------------------------------------------------------+
                               |
                               v
     [6] BROWSER-USE AGENT LOOP
-    +-----------------------------------------------------------------+
-    |                                                                 |
-    |  +-- Step 1 ------------------------------------------------+   |
-    |  |  [Think] "I need to go to Google and search"             |   |
-    |  |  [Action] navigate_to("https://google.com")              |   |
-    |  |  --> Callback: emit step_start, step_thinking, action    |   |
-    |  +----------------------------------------------------------+   |
-    |                              |                                  |
-    |  +-- Step 2 ------------------------------------------------+   |
-    |  |  [Think] "Page loaded, I see search box"                 |   |
-    |  |  [Action] type_text("Python tutorials")                  |   |
-    |  |  --> Callback: emit step_start, step_thinking, action    |   |
-    |  +----------------------------------------------------------+   |
-    |                              |                                  |
-    |  +-- Step N ------------------------------------------------+   |
-    |  |  [Think] "Task complete, found results"                  |   |
-    |  |  [Action] done("Found 10 Python tutorial results")       |   |
-    |  |  --> Callback: emit done                                 |   |
-    |  +----------------------------------------------------------+   |
-    |                                                                 |
-    +-----------------------------------------------------------------+
+    +-------------------------------------------------------------------+
+    |  Step 1: [Think] Navigate to URL                                  |
+    |          [Action] goto("https://example.com")                     |
+    |          --> SSE: step_start, step_thinking, step_action          |
+    |                                                                   |
+    |  Step 2: [Think] Find login form                                  |
+    |          [Action] click("Login button")                           |
+    |          --> SSE: step_start, step_thinking, step_action          |
+    |                                                                   |
+    |  Step N: [Think] Task complete                                    |
+    |          [Action] done("Login tested successfully")               |
+    |          --> SSE: done                                            |
+    +-------------------------------------------------------------------+
                               |
                               v
     [7] ARTIFACT GENERATION
-    +-----------------------------------------------------------------+
-    |  test_outputs/{session_id}/                                     |
-    |  +-----------------------------------------------------------+  |
-    |  |  metadata.json         # Task info                        |  |
-    |  |  raw_history.json      # Complete agent history           |  |
-    |  |  screenshots/          # Step screenshots                 |  |
-    |  |  reports/report.html   # Visual HTML report               |  |
-    |  |  reports/report.json   # Machine-readable results         |  |
-    |  |  tests/test_*.py       # Generated Playwright tests       |  |
-    |  |  agent_history.gif     # Recording video                  |  |
-    |  +-----------------------------------------------------------+  |
-    +-----------------------------------------------------------------+
+    +-------------------------------------------------------------------+
+    |  test_outputs/{session_id}/                                       |
+    |  ├── metadata.json         # Task info                            |
+    |  ├── raw_history.json      # Complete agent history               |
+    |  ├── screenshots/          # Step screenshots                     |
+    |  ├── reports/                                                     |
+    |  │   ├── report.html       # Visual HTML report                   |
+    |  │   └── report.json       # Machine-readable results             |
+    |  ├── tests/                                                       |
+    |  │   ├── test_*.py         # Generated Playwright tests           |
+    |  │   └── conftest.py       # Pytest fixtures                      |
+    |  └── agent_history.gif     # Recording video                      |
+    +-------------------------------------------------------------------+
                               |
                               v
-    [8] SSE EVENTS (Real-time to Frontend)
-    +-----------------------------------------------------------------+
-    |  data: {"type":"step_start","step":1,...}                       |
-    |  data: {"type":"step_thinking","message":"I need to...",...}    |
-    |  data: {"type":"step_action","message":"Navigating...",...}     |
-    |  data: {"type":"browser_state","data":{"url":"google.com"}}     |
-    |  ...                                                            |
-    |  data: {"type":"done","data":{"success":true,"output_dir":...}} |
-    +-----------------------------------------------------------------+
-                              |
-                              v
-    [9] FRONTEND UPDATE
-    +-----------------------------------------------------------------+
-    |  LogViewer: Display each event in terminal                      |
-    |  TestResultsPanel: Update statistics                            |
-    |  ArtifactsViewer: Load screenshots, code, reports               |
-    +-----------------------------------------------------------------+
+    [8] FRONTEND UPDATE
+    +-------------------------------------------------------------------+
+    |  LogViewer: Display each event in terminal                        |
+    |  TestResultsPanel: Update statistics                              |
+    |  ArtifactsViewer: Load screenshots, code, reports                 |
+    +-------------------------------------------------------------------+
 ```
 
 ---
@@ -721,55 +542,36 @@
 ### Request/Response Flow
 
 ```
-+============================================================================+
-|                        DATA TRANSFORMATION FLOW                            |
-+============================================================================+
-
     FRONTEND                    BACKEND                      BROWSER
     ========                    =======                      =======
 
-    TypeScript                  Python                       CDP/Playwright
-    Interface                   Pydantic Model               Actions
-    ----------                  --------------               -------
-
-    StreamingBasic    -->    StreamingTask    -->    +---------------+
-    TaskParams               Request                 | Agent.run()   |
-    {                        {                       | - navigate    |
-      task: string             task: str             | - click       |
-      max_steps: number        max_steps: int        | - type        |
-      headless: boolean        headless: bool        | - screenshot  |
-    }                        }                       +---------------+
+    StreamingTask    -->    StreamingTask    -->    +---------------+
+    Request                 Request                 | Agent.run()   |
+    {                       {                       | - navigate    |
+      task: string            task: str             | - click       |
+      max_steps: number       max_steps: int        | - type        |
+      headless: boolean       headless: bool        | - screenshot  |
+    }                       }                       +---------------+
          |                        |                         |
          v                        v                         v
-    StreamingEvent  <--    StreamEvent      <--    AgentHistoryList
-    {                      {                       {
-      type: string           event_type            history: [
-      level: string          level                   {model_output,
-      message: string        message                  state,
-      timestamp: string      timestamp                result}
-      step?: number          step_number           ]
-      data?: object          data                  }
-    }                      }
-         |                        |                         |
-         v                        v                         v
-    UI Components         TestSession              test_outputs/
-    - LogViewer           - steps[]                - screenshots/
-    - TestResults         - scenarios[]            - reports/
-    - Artifacts           - statistics             - tests/
+    StreamEvent      <--    StreamEvent      <--    AgentHistoryList
+    {                       {                       {
+      type: string            event_type              history: [...]
+      level: string           level                 }
+      message: string         message
+      step?: number           step_number
+      data?: object           data
+    }                       }
 ```
 
 ### Artifact Generation Pipeline
 
 ```
-+============================================================================+
-|                     ARTIFACT GENERATION PIPELINE                           |
-+============================================================================+
-
     AgentHistoryList (from browser-use)
            |
            v
     +------------------+
-    | StepProcessor    |  Extracts structured data from history
+    | StepProcessor    |  Extracts structured data
     +--------+---------+
              |
              v
@@ -787,126 +589,51 @@
      |                 |                   |
      v                 v                   v
 screenshots/     tests/test_*.py    reports/report.html
-step_001.png     (pytest format)    reports/report.json
-step_002.png
-...              +-------------+
-                 | conftest.py |
-                 +-------------+
-
-    All artifacts saved to: ./test_outputs/{session_id}/
+                 tests/conftest.py  reports/report.json
 ```
 
 ---
 
 ## 9. API Contract
 
-```
-+============================================================================+
-|                           API ENDPOINT REFERENCE                           |
-+============================================================================+
+### SSE Streaming Endpoints
 
-    +=======================================================================+
-    |                        REST ENDPOINTS                                  |
-    +=======================================================================+
+| Endpoint | Method | Request Body | Response |
+|----------|--------|--------------|----------|
+| `/stream/basic-task` | POST | `{task, max_steps, headless}` | SSE Stream |
+| `/stream/extract-data` | POST | `{url, data_schema, max_items, max_steps, headless}` | SSE Stream |
+| `/stream/research-topic` | POST | `{topic, depth, max_sources, max_steps, headless}` | SSE Stream |
+| `/stream/compare-products` | POST | `{products[], aspects[], max_steps, headless}` | SSE Stream |
+| `/stream/compare-pages` | POST | `{urls[], comparison_criteria, max_steps, headless}` | SSE Stream |
 
-    POST /run-ui-automator
-    ├── Request:  { instruction: string }
-    └── Response: { steps: [], summary: string }
+### Artifacts Endpoints
 
-    POST /extract-data
-    ├── Request:  { url, data_schema, max_items?, max_steps }
-    └── Response: TaskResultResponse
+| Endpoint | Method | Response |
+|----------|--------|----------|
+| `/artifacts/{session_id}` | GET | `SessionArtifacts` |
+| `/artifacts/{session_id}/file/{path}` | GET | File (binary) |
+| `/artifacts/{session_id}/code` | GET | `{filename, content, path}` |
+| `/sessions` | GET | `{sessions: SessionInfo[]}` |
 
-    POST /research-topic
-    ├── Request:  { topic, depth, max_sources, max_steps }
-    └── Response: TaskResultResponse
+### Response Models
 
-    POST /compare-products
-    ├── Request:  { products[], aspects[], max_steps }
-    └── Response: TaskResultResponse
+```python
+class SessionArtifacts:
+    session_id: str
+    output_directory: str
+    artifacts: List[ArtifactInfo]
+    html_report: Optional[str]
+    json_report: Optional[str]
+    playwright_code: Optional[str]
+    screenshots: List[str]
+    video: Optional[str]
 
-    POST /run-parallel-tasks
-    ├── Request:  { tasks[], max_concurrent }
-    └── Response: TaskResultResponse[]
-
-    POST /compare-pages
-    ├── Request:  { urls[], comparison_criteria, max_steps }
-    └── Response: TaskResultResponse
-
-    +=======================================================================+
-    |                      STREAMING ENDPOINTS (SSE)                        |
-    +=======================================================================+
-
-    POST /stream/basic-task
-    ├── Request:  { task, max_steps, headless }
-    └── Response: text/event-stream (StreamingEvent[])
-
-    POST /stream/extract-data
-    ├── Request:  { url, data_schema, max_items?, max_steps, headless }
-    └── Response: text/event-stream
-
-    POST /stream/research-topic
-    ├── Request:  { topic, depth, max_sources, max_steps, headless }
-    └── Response: text/event-stream
-
-    POST /stream/compare-products
-    ├── Request:  { products[], aspects[], max_steps, headless }
-    └── Response: text/event-stream
-
-    POST /stream/compare-pages
-    ├── Request:  { urls[], comparison_criteria, max_steps, headless }
-    └── Response: text/event-stream
-
-    +=======================================================================+
-    |                       ARTIFACTS ENDPOINTS                              |
-    +=======================================================================+
-
-    GET /artifacts/{session_id}
-    └── Response: SessionArtifacts
-
-    GET /artifacts/{session_id}/file/{path}
-    └── Response: FileResponse (binary)
-
-    GET /artifacts/{session_id}/code
-    └── Response: { filename, content, path }
-
-    GET /sessions
-    └── Response: { sessions: SessionInfo[] }
-
-    +=======================================================================+
-    |                      RESPONSE MODELS                                   |
-    +=======================================================================+
-
-    TaskResultResponse:
-    {
-        success: boolean
-        task_type: string
-        summary: string
-        data: object
-        steps: [{ action: string, status: string }]
-        error?: string
-    }
-
-    SessionArtifacts:
-    {
-        session_id: string
-        output_directory: string
-        artifacts: ArtifactInfo[]
-        html_report?: string
-        json_report?: string
-        playwright_code?: string
-        screenshots: string[]
-        video?: string
-    }
-
-    SessionInfo:
-    {
-        session_id: string
-        created_at: number (timestamp)
-        has_report: boolean
-        task?: string
-        max_steps?: number
-    }
+class SessionInfo:
+    session_id: str
+    created_at: float  # timestamp
+    has_report: bool
+    task: Optional[str]
+    max_steps: Optional[int]
 ```
 
 ---
@@ -914,62 +641,50 @@ step_002.png
 ## 10. File Organization
 
 ```
-+============================================================================+
-|                          PROJECT FILE STRUCTURE                            |
-+============================================================================+
-
 ai_apps_testing/
 │
-├── frontend/
-│   ├── services/
-│   │   └── geminiService.ts        # API client (REST + SSE)
-│   │
-│   ├── components/
-│   │   ├── LogViewer.tsx           # Streaming terminal
-│   │   ├── TestResultsPanel.tsx    # Test statistics
-│   │   ├── ArtifactsViewer.tsx     # Screenshots, code, reports
-│   │   ├── SessionBrowser.tsx      # History browser
-│   │   └── SessionComparison.tsx   # Compare sessions
-│   │
-│   ├── apps/
-│   │   └── UIAutomator.tsx         # Main UI component
-│   │
-│   └── types.ts                    # TypeScript interfaces
+├── App.tsx                         # Main React app
+├── index.html                      # HTML entry point
+│
+├── apps/
+│   └── UIAutomator.tsx             # Main UI component
+│
+├── components/
+│   ├── LogViewer.tsx               # Streaming terminal
+│   ├── TestResultsPanel.tsx        # Test statistics
+│   ├── ArtifactsViewer.tsx         # Screenshots, code, reports
+│   ├── SessionBrowser.tsx          # History browser
+│   ├── SessionComparison.tsx       # Compare sessions
+│   ├── Sidebar.tsx                 # Navigation
+│   └── Toast.tsx                   # Notifications
 │
 ├── backend/
 │   ├── main.py                     # FastAPI application
 │   │
 │   ├── advanced_browser_services/
 │   │   ├── __init__.py             # Package exports
-│   │   ├── base_service.py         # LLM + BrowserConfig
-│   │   ├── service_runner.py       # AdvancedBrowserService facade
+│   │   ├── base_service.py         # LLM + BaseAgentService
 │   │   ├── streaming.py            # SSE infrastructure
-│   │   ├── streaming_runner.py     # Streaming task runner
-│   │   ├── multi_tab_agent.py      # Multi-tab automation
-│   │   ├── parallel_agents.py      # Concurrent execution
-│   │   ├── research_agent.py       # Web research
-│   │   ├── data_extraction_agent.py# Data scraping
-│   │   └── test_agents.py          # Test suite
+│   │   └── streaming_runner.py     # StreamingAgentRunner
 │   │
-│   ├── ui_testing_agent/
-│   │   ├── __init__.py
-│   │   ├── service.py              # UITestingService
-│   │   ├── core/
-│   │   │   ├── explorer_agent.py   # Main ExplorerAgent
-│   │   │   ├── step_processor.py   # History processor
-│   │   │   └── selector_extractor.py
-│   │   ├── generators/
-│   │   │   ├── playwright_generator.py
-│   │   │   └── report_generator.py
-│   │   ├── models/
-│   │   │   ├── output_config.py
-│   │   │   ├── processed_step.py
-│   │   │   ├── test_session.py
-│   │   │   └── selector_info.py
-│   │   └── prompts/
-│   │       └── qa_engineer_prompt.py
-│   │
-│   └── browsers_services.py        # Legacy browser service
+│   └── ui_testing_agent/
+│       ├── __init__.py
+│       ├── service.py              # UITestingService
+│       ├── core/
+│       │   ├── browser_factory.py  # BrowserFactory (SINGLE SOURCE OF TRUTH)
+│       │   ├── explorer_agent.py   # ExplorerAgent
+│       │   ├── step_processor.py   # History processor
+│       │   └── selector_extractor.py
+│       ├── generators/
+│       │   ├── playwright_generator.py
+│       │   └── report_generator.py
+│       ├── models/
+│       │   ├── output_config.py
+│       │   ├── processed_step.py
+│       │   ├── test_session.py
+│       │   └── selector_info.py
+│       └── prompts/
+│           └── qa_engineer_prompt.py
 │
 ├── test_outputs/                   # Generated artifacts
 │   └── {session_id}/
@@ -987,8 +702,7 @@ ai_apps_testing/
 └── docs/
     ├── ARCHITECTURE.md             # This document
     ├── ADVANCED_BROWSER_SERVICES.md
-    ├── CDP_CLIENT_FIX_OPTIONS.md
-    └── UI_TESTING_AGENT_OUTPUTS.md
+    └── CDP_GRACEFUL_FALLBACK_PLAN.md
 ```
 
 ---
@@ -997,11 +711,17 @@ ai_apps_testing/
 
 This architecture provides:
 
-1. **Separation of Concerns** - Frontend handles UI, backend handles automation
+1. **Single Source of Truth** - BrowserFactory handles all browser instantiation
 2. **Real-time Updates** - SSE streaming for live progress
-3. **Specialized Agents** - Different agents for different tasks
-4. **Parallel Execution** - Run multiple browsers concurrently
-5. **Artifact Generation** - Automated test code and reports
-6. **Session Management** - History, comparison, and re-run capabilities
+3. **Artifact Generation** - Automated screenshots, reports, and Playwright tests
+4. **Session Management** - History, comparison, and re-run capabilities
+5. **Graceful Fallback** - Multiple browser initialization strategies
 
-The system is designed to be extensible - new agent types can be added by inheriting from `BaseAgentService` and registering new endpoints in `main.py`.
+### Key Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| BrowserFactory pattern | Centralized browser creation with graceful fallback |
+| SSE over WebSocket | Simpler, unidirectional, sufficient for progress updates |
+| Streaming-first API | All tasks stream progress in real-time |
+| Artifact persistence | All test runs saved for comparison and replay |
