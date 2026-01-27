@@ -120,8 +120,8 @@ class ExplorerAgent:
 
         # Attach recorder to capture actions for offline replay
         # This records all browser-use actions via event bus for LLM-free replay later
-        # Only attach if we have a BrowserSession (not agent-managed browser)
-        if self._browser_result.browser_type == "browser_session" and self._browser_result.browser:
+        # Browser is an alias for BrowserSession, so both types support event bus recording
+        if self._browser_result.browser_type in ("browser_session", "browser") and self._browser_result.browser:
             self._recorder = BrowserUseRecorder(
                 session_id=self.session_id,
                 task=task,

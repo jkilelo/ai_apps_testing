@@ -99,7 +99,7 @@ const SessionComparison: React.FC<SessionComparisonProps> = ({ onClose }) => {
           <div className="bg-white rounded-xl border border-acme-gray-200 p-3">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-6 h-6 rounded-lg bg-acme-navy flex items-center justify-center">
-                <span className="text-[10px] font-bold text-white">A</span>
+                <span className="text-xs font-bold text-white">A</span>
               </div>
               <label className="text-xs font-medium text-acme-gray-700">
                 Baseline Session
@@ -124,7 +124,7 @@ const SessionComparison: React.FC<SessionComparisonProps> = ({ onClose }) => {
           <div className="bg-white rounded-xl border border-acme-gray-200 p-3">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-6 h-6 rounded-lg bg-sky-500 flex items-center justify-center">
-                <span className="text-[10px] font-bold text-white">B</span>
+                <span className="text-xs font-bold text-white">B</span>
               </div>
               <label className="text-xs font-medium text-acme-gray-700">
                 Compare Session
@@ -160,7 +160,7 @@ const SessionComparison: React.FC<SessionComparisonProps> = ({ onClose }) => {
                   : 'text-acme-gray-600 hover:bg-acme-gray-100'
               }`}
             >
-              <i className="fas fa-chart-bar text-[10px]"></i>
+              <i className="fas fa-chart-bar text-xs"></i>
               Summary
             </button>
             <button
@@ -171,10 +171,10 @@ const SessionComparison: React.FC<SessionComparisonProps> = ({ onClose }) => {
                   : 'text-acme-gray-600 hover:bg-acme-gray-100'
               }`}
             >
-              <i className="fas fa-images text-[10px]"></i>
+              <i className="fas fa-images text-xs"></i>
               Screenshots
               {artifactsA && artifactsB && (
-                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                <span className={`px-1.5 py-0.5 rounded-full text-xs ${
                   activeTab === 'screenshots' ? 'bg-white/20' : 'bg-acme-gray-200'
                 }`}>
                   {artifactsA.screenshots.length + artifactsB.screenshots.length}
@@ -200,7 +200,7 @@ const SessionComparison: React.FC<SessionComparisonProps> = ({ onClose }) => {
                     {/* Screenshots Comparison */}
                     <div className="bg-white rounded-xl border border-acme-gray-200 p-4 shadow-sm">
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-[10px] font-semibold text-acme-gray-600 uppercase tracking-wider">Screenshots</span>
+                        <span className="text-xs font-semibold text-acme-gray-600 uppercase tracking-wider">Screenshots</span>
                         <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center">
                           <i className="fas fa-camera text-violet-600 text-xs"></i>
                         </div>
@@ -208,9 +208,9 @@ const SessionComparison: React.FC<SessionComparisonProps> = ({ onClose }) => {
                       <div className="flex items-center justify-between">
                         <div className="text-center">
                           <div className="text-lg font-bold text-acme-navy">{artifactsA.screenshots.length}</div>
-                          <div className="text-[10px] text-acme-gray-500">Session A</div>
+                          <div className="text-xs text-acme-gray-500">Session A</div>
                         </div>
-                        <div className={`px-2 py-1 rounded-full text-[10px] font-medium ${
+                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
                           artifactsA.screenshots.length === artifactsB.screenshots.length
                             ? 'bg-emerald-100 text-emerald-700'
                             : 'bg-amber-100 text-amber-700'
@@ -221,7 +221,7 @@ const SessionComparison: React.FC<SessionComparisonProps> = ({ onClose }) => {
                         </div>
                         <div className="text-center">
                           <div className="text-lg font-bold text-sky-500">{artifactsB.screenshots.length}</div>
-                          <div className="text-[10px] text-acme-gray-500">Session B</div>
+                          <div className="text-xs text-acme-gray-500">Session B</div>
                         </div>
                       </div>
                     </div>
@@ -229,7 +229,7 @@ const SessionComparison: React.FC<SessionComparisonProps> = ({ onClose }) => {
                     {/* Artifacts Comparison */}
                     <div className="bg-white rounded-xl border border-acme-gray-200 p-4 shadow-sm">
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-[10px] font-semibold text-acme-gray-600 uppercase tracking-wider">Total Files</span>
+                        <span className="text-xs font-semibold text-acme-gray-600 uppercase tracking-wider">Total Files</span>
                         <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
                           <i className="fas fa-folder text-amber-600 text-xs"></i>
                         </div>
@@ -237,9 +237,9 @@ const SessionComparison: React.FC<SessionComparisonProps> = ({ onClose }) => {
                       <div className="flex items-center justify-between">
                         <div className="text-center">
                           <div className="text-lg font-bold text-acme-navy">{artifactsA.artifacts.length}</div>
-                          <div className="text-[10px] text-acme-gray-500">Session A</div>
+                          <div className="text-xs text-acme-gray-500">Session A</div>
                         </div>
-                        <div className={`px-2 py-1 rounded-full text-[10px] font-medium ${
+                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
                           artifactsA.artifacts.length === artifactsB.artifacts.length
                             ? 'bg-emerald-100 text-emerald-700'
                             : 'bg-amber-100 text-amber-700'
@@ -250,7 +250,7 @@ const SessionComparison: React.FC<SessionComparisonProps> = ({ onClose }) => {
                         </div>
                         <div className="text-center">
                           <div className="text-lg font-bold text-sky-500">{artifactsB.artifacts.length}</div>
-                          <div className="text-[10px] text-acme-gray-500">Session B</div>
+                          <div className="text-xs text-acme-gray-500">Session B</div>
                         </div>
                       </div>
                     </div>
@@ -258,7 +258,7 @@ const SessionComparison: React.FC<SessionComparisonProps> = ({ onClose }) => {
                     {/* Reports Status */}
                     <div className="bg-white rounded-xl border border-acme-gray-200 p-4 shadow-sm">
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-[10px] font-semibold text-acme-gray-600 uppercase tracking-wider">Reports</span>
+                        <span className="text-xs font-semibold text-acme-gray-600 uppercase tracking-wider">Reports</span>
                         <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center">
                           <i className="fas fa-file-alt text-emerald-600 text-xs"></i>
                         </div>
@@ -268,9 +268,9 @@ const SessionComparison: React.FC<SessionComparisonProps> = ({ onClose }) => {
                           <div className={`text-lg font-bold ${artifactsA.html_report ? 'text-emerald-600' : 'text-acme-gray-300'}`}>
                             {artifactsA.html_report ? 'Yes' : 'No'}
                           </div>
-                          <div className="text-[10px] text-acme-gray-500">Session A</div>
+                          <div className="text-xs text-acme-gray-500">Session A</div>
                         </div>
-                        <div className={`px-2 py-1 rounded-full text-[10px] font-medium ${
+                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
                           artifactsA.html_report && artifactsB.html_report
                             ? 'bg-emerald-100 text-emerald-700'
                             : !artifactsA.html_report && !artifactsB.html_report
@@ -287,7 +287,7 @@ const SessionComparison: React.FC<SessionComparisonProps> = ({ onClose }) => {
                           <div className={`text-lg font-bold ${artifactsB.html_report ? 'text-emerald-600' : 'text-acme-gray-300'}`}>
                             {artifactsB.html_report ? 'Yes' : 'No'}
                           </div>
-                          <div className="text-[10px] text-acme-gray-500">Session B</div>
+                          <div className="text-xs text-acme-gray-500">Session B</div>
                         </div>
                       </div>
                     </div>
@@ -303,7 +303,7 @@ const SessionComparison: React.FC<SessionComparisonProps> = ({ onClose }) => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm font-semibold text-acme-navy truncate">{sessionA}</h4>
-                          <p className="text-[10px] text-acme-gray-600">Baseline Session</p>
+                          <p className="text-xs text-acme-gray-600">Baseline Session</p>
                         </div>
                       </div>
                       <div className="space-y-2">
@@ -338,7 +338,7 @@ const SessionComparison: React.FC<SessionComparisonProps> = ({ onClose }) => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm font-semibold text-sky-700 truncate">{sessionB}</h4>
-                          <p className="text-[10px] text-acme-gray-600">Compare Session</p>
+                          <p className="text-xs text-acme-gray-600">Compare Session</p>
                         </div>
                       </div>
                       <div className="space-y-2">
@@ -392,7 +392,7 @@ const SessionComparison: React.FC<SessionComparisonProps> = ({ onClose }) => {
                             className="w-full rounded-xl border border-acme-gray-200 shadow-sm group-hover:shadow-md transition-all"
                             loading="lazy"
                           />
-                          <div className="absolute top-2 left-2 px-2 py-1 bg-acme-navy text-white text-[10px] font-medium rounded-lg shadow">
+                          <div className="absolute top-2 left-2 px-2 py-1 bg-acme-navy text-white text-xs font-medium rounded-lg shadow">
                             Step {index + 1}
                           </div>
                           <div className="absolute inset-0 bg-acme-navy/0 group-hover:bg-acme-navy/10 rounded-xl transition-colors flex items-center justify-center">
@@ -433,7 +433,7 @@ const SessionComparison: React.FC<SessionComparisonProps> = ({ onClose }) => {
                             className="w-full rounded-xl border border-acme-gray-200 shadow-sm group-hover:shadow-md transition-all"
                             loading="lazy"
                           />
-                          <div className="absolute top-2 left-2 px-2 py-1 bg-sky-500 text-white text-[10px] font-medium rounded-lg shadow">
+                          <div className="absolute top-2 left-2 px-2 py-1 bg-sky-500 text-white text-xs font-medium rounded-lg shadow">
                             Step {index + 1}
                           </div>
                           <div className="absolute inset-0 bg-sky-500/0 group-hover:bg-sky-500/10 rounded-xl transition-colors flex items-center justify-center">

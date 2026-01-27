@@ -149,7 +149,7 @@ const App: React.FC = () => {
             <div className="flex items-center gap-4">
               {lastRunTime && (
                 <span className="flex items-center gap-1.5 text-acme-gray-500">
-                  <i className="fas fa-clock text-[9px]"></i>
+                  <i className="fas fa-clock text-[10px]"></i>
                   Last run: {formatRelativeTime(lastRunTime)}
                 </span>
               )}
@@ -197,7 +197,7 @@ const App: React.FC = () => {
             <div className="p-6 space-y-5">
               {SHORTCUT_GROUPS.map((group) => (
                 <div key={group.title}>
-                  <h3 className="text-[10px] font-bold text-acme-gray-500 uppercase tracking-wider mb-2.5">
+                  <h3 className="text-xs font-bold text-acme-gray-500 uppercase tracking-wider mb-2.5">
                     {group.title}
                   </h3>
                   <div className="space-y-2">

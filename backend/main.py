@@ -649,21 +649,25 @@ async def run_replay(session_id: str, request: Optional[ReplayRequest] = None):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load recording: {e}")
 
-    # Create browser session for replay
-    from browser_use import BrowserSession
+    # Create browser using the factory (single source of truth)
+    from ui_testing_agent.core.browser_factory import BrowserFactory, BrowserConfig
 
-    browser_session = BrowserSession(
-        headless=request.headless,
-        disable_security=True,
+    browser_result = await BrowserFactory.create(
+        config=BrowserConfig(headless=request.headless, disable_security=True)
     )
+    if browser_result.browser is None:
+        raise HTTPException(status_code=500, detail="Could not create browser for replay")
 
-    try:
-        # Start the browser session
+    browser_session = browser_result.browser
+
+    # browser_class strategy defers start() to the caller
+    if browser_result.strategy_used == "browser_class":
         await browser_session.start()
 
+    try:
         # Create replayer and run
         replayer = BrowserUseReplayer()
-        result = await replayer.replay(
+        replay_result = await replayer.replay(
             session=recorded,
             browser_session=browser_session,
             stop_on_failure=request.stop_on_failure,
@@ -671,25 +675,21 @@ async def run_replay(session_id: str, request: Optional[ReplayRequest] = None):
         )
 
         return ReplayResponse(
-            success=result.success,
+            success=replay_result.success,
             session_id=session_id,
-            actions_total=result.actions_total,
-            actions_succeeded=result.actions_succeeded,
-            actions_failed=result.actions_failed,
-            failed_steps=result.failed_steps,
-            errors=result.errors,
-            duration_seconds=result.duration_seconds,
+            actions_total=replay_result.actions_total,
+            actions_succeeded=replay_result.actions_succeeded,
+            actions_failed=replay_result.actions_failed,
+            failed_steps=replay_result.failed_steps,
+            errors=replay_result.errors,
+            duration_seconds=replay_result.duration_seconds,
         )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Replay failed: {e}")
 
     finally:
-        # Clean up browser
-        try:
-            await browser_session.stop()
-        except Exception:
-            pass
+        await BrowserFactory.cleanup(browser_result)
 
 
 @app.post("/stream/replay/{session_id}")
@@ -719,16 +719,22 @@ async def stream_replay(session_id: str, request: Optional[ReplayRequest] = None
         raise HTTPException(status_code=500, detail=f"Failed to load recording: {e}")
 
     async def event_generator():
-        from browser_use import BrowserSession
+        from ui_testing_agent.core.browser_factory import BrowserFactory, BrowserConfig
 
-        browser_session = BrowserSession(
-            headless=request.headless,
-            disable_security=True,
+        browser_result = await BrowserFactory.create(
+            config=BrowserConfig(headless=request.headless, disable_security=True)
         )
+        if browser_result.browser is None:
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Could not create browser for replay'})}\n\n"
+            return
 
-        try:
+        browser_session = browser_result.browser
+
+        # browser_class strategy defers start() to the caller
+        if browser_result.strategy_used == "browser_class":
             await browser_session.start()
 
+        try:
             # Progress tracking via callbacks
             progress_events = asyncio.Queue()
 
@@ -804,10 +810,7 @@ async def stream_replay(session_id: str, request: Optional[ReplayRequest] = None
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
         finally:
-            try:
-                await browser_session.stop()
-            except Exception:
-                pass
+            await BrowserFactory.cleanup(browser_result)
 
     return StreamingResponse(
         event_generator(),

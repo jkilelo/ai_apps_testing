@@ -93,7 +93,7 @@ const BrowserPreviewPanel: React.FC<BrowserPreviewPanelProps> = ({
                 }}
               />
               <div className="flex items-center gap-1.5 overflow-hidden">
-                <i className="fas fa-lock text-[9px] text-emerald-400"></i>
+                <i className="fas fa-lock text-[10px] text-emerald-400"></i>
                 <span className="text-xs text-acme-gray-300 font-medium truncate">
                   {getDomain(browserState.url)}
                 </span>
@@ -111,7 +111,7 @@ const BrowserPreviewPanel: React.FC<BrowserPreviewPanelProps> = ({
             className="w-6 h-6 flex items-center justify-center text-acme-gray-500 hover:text-acme-gray-300 transition-colors"
             title="Hide preview"
           >
-            <i className="fas fa-chevron-up text-[10px]"></i>
+            <i className="fas fa-chevron-up text-xs"></i>
           </button>
         )}
       </div>
@@ -150,7 +150,7 @@ const BrowserPreviewPanel: React.FC<BrowserPreviewPanelProps> = ({
 
               {/* Current Action */}
               <div className="flex items-center gap-2 mb-2">
-                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${actionStyle.bg} ${actionStyle.text}`}>
+                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${actionStyle.bg} ${actionStyle.text}`}>
                   {browserState?.currentAction?.replace(/_/g, ' ').toUpperCase() || 'PROCESSING'}
                 </span>
                 {browserState?.actionParams?.text && (
@@ -161,7 +161,7 @@ const BrowserPreviewPanel: React.FC<BrowserPreviewPanelProps> = ({
               </div>
 
               {/* Full URL */}
-              <p className="text-[10px] text-acme-gray-500 truncate font-mono">
+              <p className="text-xs text-acme-gray-500 truncate font-mono">
                 {browserState?.url || 'about:blank'}
               </p>
             </div>
@@ -172,7 +172,7 @@ const BrowserPreviewPanel: React.FC<BrowserPreviewPanelProps> = ({
                 {browserState?.currentStep || 0}
                 <span className="text-acme-gray-500 text-sm">/{maxSteps}</span>
               </div>
-              <p className="text-[10px] text-acme-gray-500 font-medium">STEP</p>
+              <p className="text-xs text-acme-gray-500 font-medium">STEP</p>
             </div>
           </div>
         )}

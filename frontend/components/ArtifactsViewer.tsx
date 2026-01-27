@@ -314,10 +314,10 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                   : 'text-acme-gray-600 hover:text-acme-gray-800 hover:bg-acme-gray-50'
               }`}
             >
-              <i className={`fas ${tab.icon} text-[10px]`}></i>
+              <i className={`fas ${tab.icon} text-xs`}></i>
               {tab.label}
               {tab.count !== undefined && tab.count > 0 && (
-                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
                   activeTab === tab.id ? 'bg-acme-navy text-white' : 'bg-acme-gray-200 text-acme-gray-600'
                 }`}>
                   {tab.count}
@@ -371,7 +371,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                             <button
                               key={size}
                               onClick={() => setThumbnailSize(size)}
-                              className={`px-3 py-1 text-[10px] rounded-md transition-colors font-medium ${
+                              className={`px-3 py-1 text-xs rounded-md transition-colors font-medium ${
                                 thumbnailSize === size
                                   ? 'bg-white text-acme-navy shadow-sm'
                                   : 'text-acme-gray-600 hover:text-acme-gray-800'
@@ -385,7 +385,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                           onClick={startSlideshow}
                           className="px-3 py-1.5 text-xs bg-acme-navy text-white rounded-lg hover:bg-acme-navy-light transition-colors flex items-center gap-1.5"
                         >
-                          <i className="fas fa-play text-[10px]"></i>
+                          <i className="fas fa-play text-xs"></i>
                           Slideshow
                         </button>
                       </div>
@@ -413,7 +413,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                               <i className="fas fa-expand text-acme-navy text-sm"></i>
                             </div>
                           </div>
-                          <div className="absolute bottom-2 left-2 px-2 py-1 bg-acme-navy/90 text-white text-[10px] font-bold rounded-md">
+                          <div className="absolute bottom-2 left-2 px-2 py-1 bg-acme-navy/90 text-white text-xs font-bold rounded-md">
                             {index + 1}
                           </div>
                         </button>
@@ -442,7 +442,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                       <div className="bg-white rounded-xl border border-acme-gray-200 p-3 shadow-sm">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-[10px] font-semibold text-acme-gray-500 uppercase tracking-wider">Actions</p>
+                            <p className="text-xs font-semibold text-acme-gray-500 uppercase tracking-wider">Actions</p>
                             <p className="text-sm font-bold text-acme-navy mt-1">{replayInfo.action_count}</p>
                           </div>
                           <div className="w-9 h-9 rounded-xl bg-acme-navy/10 flex items-center justify-center">
@@ -453,7 +453,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                       <div className="bg-white rounded-xl border border-acme-gray-200 p-3 shadow-sm">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-[10px] font-semibold text-acme-gray-500 uppercase tracking-wider">Session</p>
+                            <p className="text-xs font-semibold text-acme-gray-500 uppercase tracking-wider">Session</p>
                             <p className="text-sm font-bold text-acme-gray-800 mt-1 font-mono">{replayInfo.session_id.slice(0, 8)}</p>
                           </div>
                           <div className="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center">
@@ -464,7 +464,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                       <div className="bg-white rounded-xl border border-acme-gray-200 p-3 shadow-sm">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-[10px] font-semibold text-acme-gray-500 uppercase tracking-wider">Type</p>
+                            <p className="text-xs font-semibold text-acme-gray-500 uppercase tracking-wider">Type</p>
                             <p className="text-sm font-bold text-emerald-600 mt-1">Zero-LLM</p>
                           </div>
                           <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
@@ -475,7 +475,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                       <div className="bg-white rounded-xl border border-acme-gray-200 p-3 shadow-sm">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-[10px] font-semibold text-acme-gray-500 uppercase tracking-wider">Version</p>
+                            <p className="text-xs font-semibold text-acme-gray-500 uppercase tracking-wider">Version</p>
                             <p className="text-sm font-bold text-amber-600 mt-1">{replayInfo.browser_use_version || 'N/A'}</p>
                           </div>
                           <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center">
@@ -493,8 +493,8 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                           {replayInfo.action_summary && Object.entries(replayInfo.action_summary).map(([type, count]) => {
                             const style = getActionStyle(type);
                             return (
-                              <span key={type} className={`inline-flex items-center gap-1 px-2 py-0.5 ${style.bg} rounded-md text-[10px] font-semibold ${style.text}`}>
-                                <i className={`fas ${style.icon} text-[9px]`}></i>
+                              <span key={type} className={`inline-flex items-center gap-1 px-2 py-0.5 ${style.bg} rounded-md text-xs font-semibold ${style.text}`}>
+                                <i className={`fas ${style.icon} text-[10px]`}></i>
                                 {count}
                               </span>
                             );
@@ -571,20 +571,20 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                                     <div className="flex items-center justify-between gap-2">
                                       <div className="flex items-center gap-2 min-w-0">
                                         <span className={`text-xs font-semibold ${style.text} flex-shrink-0`}>{style.label}</span>
-                                        <span className="text-[10px] text-acme-gray-400 font-mono flex-shrink-0">#{action.step}</span>
+                                        <span className="text-xs text-acme-gray-400 font-mono flex-shrink-0">#{action.step}</span>
                                         {isLast && (
-                                          <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[9px] font-bold flex-shrink-0">
+                                          <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px] font-bold flex-shrink-0">
                                             FINAL
                                           </span>
                                         )}
                                         {screenshot && (
-                                          <i className="fas fa-camera text-pink-400 text-[9px] flex-shrink-0" title="Has screenshot"></i>
+                                          <i className="fas fa-camera text-pink-400 text-[10px] flex-shrink-0" title="Has screenshot"></i>
                                         )}
                                       </div>
                                       <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-all ${
                                         isSelected ? `${style.text}` : 'text-acme-gray-300 group-hover:text-acme-gray-500'
                                       }`}>
-                                        <i className={`fas fa-chevron-${isSelected ? 'up' : 'down'} text-[9px]`}></i>
+                                        <i className={`fas fa-chevron-${isSelected ? 'up' : 'down'} text-[10px]`}></i>
                                       </div>
                                     </div>
 
@@ -598,7 +598,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                                           <span className="text-acme-gray-700">"{action.text}"</span>
                                         )}
                                         {!action.url && !action.text && action.element_selector && (
-                                          <code className="text-[10px] text-acme-gray-500 font-mono">{action.element_selector}</code>
+                                          <code className="text-xs text-acme-gray-500 font-mono">{action.element_selector}</code>
                                         )}
                                       </div>
                                     )}
@@ -616,20 +616,20 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                                         <div className="text-xs space-y-1.5 bg-white/60 rounded-md p-2">
                                           {action.url && (
                                             <div className="flex items-start gap-1.5">
-                                              <i className="fas fa-link text-acme-gray-400 text-[10px] mt-0.5 flex-shrink-0"></i>
+                                              <i className="fas fa-link text-acme-gray-400 text-xs mt-0.5 flex-shrink-0"></i>
                                               <span className="font-mono text-blue-600 break-all text-[11px]">{action.url}</span>
                                             </div>
                                           )}
                                           {action.text && (
                                             <div className="flex items-start gap-1.5">
-                                              <i className="fas fa-font text-acme-gray-400 text-[10px] mt-0.5 flex-shrink-0"></i>
+                                              <i className="fas fa-font text-acme-gray-400 text-xs mt-0.5 flex-shrink-0"></i>
                                               <span className="font-medium text-acme-gray-800 text-[11px]">"{action.text}"</span>
                                             </div>
                                           )}
                                           {action.element_selector && (
                                             <div className="flex items-start gap-1.5">
-                                              <i className="fas fa-crosshairs text-acme-gray-400 text-[10px] mt-0.5 flex-shrink-0"></i>
-                                              <code className="text-[10px] bg-acme-gray-100 px-1.5 py-0.5 rounded font-mono text-acme-gray-700 break-all">
+                                              <i className="fas fa-crosshairs text-acme-gray-400 text-xs mt-0.5 flex-shrink-0"></i>
+                                              <code className="text-xs bg-acme-gray-100 px-1.5 py-0.5 rounded font-mono text-acme-gray-700 break-all">
                                                 {action.element_selector}
                                               </code>
                                             </div>
@@ -649,7 +649,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                                                 setLightboxIndex(action.step - 1);
                                               }}
                                             />
-                                            <div className="px-2 py-1 bg-acme-gray-50 text-[10px] text-acme-gray-500 flex items-center justify-between">
+                                            <div className="px-2 py-1 bg-acme-gray-50 text-xs text-acme-gray-500 flex items-center justify-between">
                                               <span>Click to enlarge</span>
                                               <span>Step {action.step}</span>
                                             </div>
@@ -697,7 +697,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                                     : 'bg-white/10 text-white hover:bg-white/20'
                                 }`}
                               >
-                                <i className={`fas ${codeCopied ? 'fa-check' : 'fa-copy'} text-[10px]`}></i>
+                                <i className={`fas ${codeCopied ? 'fa-check' : 'fa-copy'} text-xs`}></i>
                                 {codeCopied ? 'Copied!' : 'Copy'}
                               </button>
                             </div>
@@ -715,7 +715,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                     </div>
 
                     {/* Footer info */}
-                    <div className="flex items-center justify-between px-1 text-[10px] text-acme-gray-500">
+                    <div className="flex items-center justify-between px-1 text-xs text-acme-gray-500">
                       <div className="flex items-center gap-2">
                         <span className="flex items-center gap-1">
                           <i className="fas fa-bolt text-emerald-500"></i>
@@ -768,7 +768,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                       <div className="bg-white rounded-xl border border-acme-gray-200 p-3 shadow-sm">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-[10px] font-semibold text-acme-gray-500 uppercase tracking-wider">Report Type</p>
+                            <p className="text-xs font-semibold text-acme-gray-500 uppercase tracking-wider">Report Type</p>
                             <p className="text-sm font-bold text-acme-gray-800 mt-1">HTML</p>
                           </div>
                           <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center">
@@ -779,7 +779,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                       <div className="bg-white rounded-xl border border-acme-gray-200 p-3 shadow-sm">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-[10px] font-semibold text-acme-gray-500 uppercase tracking-wider">Status</p>
+                            <p className="text-xs font-semibold text-acme-gray-500 uppercase tracking-wider">Status</p>
                             <p className="text-sm font-bold text-emerald-600 mt-1">Available</p>
                           </div>
                           <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
@@ -790,7 +790,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                       <div className="bg-white rounded-xl border border-acme-gray-200 p-3 shadow-sm">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-[10px] font-semibold text-acme-gray-500 uppercase tracking-wider">Video</p>
+                            <p className="text-xs font-semibold text-acme-gray-500 uppercase tracking-wider">Video</p>
                             <p className={`text-sm font-bold mt-1 ${artifacts.video ? 'text-sky-600' : 'text-acme-gray-400'}`}>
                               {artifacts.video ? 'Available' : 'N/A'}
                             </p>
@@ -812,7 +812,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                           </div>
                           <div>
                             <h4 className="text-sm font-semibold text-white">Execution Report</h4>
-                            <p className="text-[10px] text-white/70">Interactive test results and screenshots</p>
+                            <p className="text-xs text-white/70">Interactive test results and screenshots</p>
                           </div>
                         </div>
                         <div className="flex gap-2">
@@ -873,7 +873,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                         </div>
                         <div>
                           <h4 className="text-sm font-semibold text-white">Recording Playback</h4>
-                          <p className="text-[10px] text-white/70">Visual execution recording (GIF)</p>
+                          <p className="text-xs text-white/70">Visual execution recording (GIF)</p>
                         </div>
                       </div>
                       <button
@@ -891,7 +891,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                           alt="Test Recording"
                           className="max-w-full max-h-[400px] rounded-xl shadow-lg border border-acme-gray-200"
                         />
-                        <div className="absolute top-3 left-3 px-2 py-1 bg-acme-gray-900/80 text-white text-[10px] rounded-lg flex items-center gap-1.5">
+                        <div className="absolute top-3 left-3 px-2 py-1 bg-acme-gray-900/80 text-white text-xs rounded-lg flex items-center gap-1.5">
                           <i className="fas fa-circle text-acme-red animate-pulse" style={{ fontSize: '6px' }}></i>
                           Recording
                         </div>
@@ -912,7 +912,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                       <div className="bg-white rounded-xl border border-acme-gray-200 p-3 shadow-sm">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-[10px] font-semibold text-acme-gray-500 uppercase tracking-wider">Total Files</p>
+                            <p className="text-xs font-semibold text-acme-gray-500 uppercase tracking-wider">Total Files</p>
                             <p className="text-sm font-bold text-acme-navy mt-1">{artifacts.artifacts.length}</p>
                           </div>
                           <div className="w-9 h-9 rounded-xl bg-acme-navy/10 flex items-center justify-center">
@@ -923,7 +923,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                       <div className="bg-white rounded-xl border border-acme-gray-200 p-3 shadow-sm">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-[10px] font-semibold text-acme-gray-500 uppercase tracking-wider">Screenshots</p>
+                            <p className="text-xs font-semibold text-acme-gray-500 uppercase tracking-wider">Screenshots</p>
                             <p className="text-sm font-bold text-violet-600 mt-1">
                               {artifacts.artifacts.filter(a => a.type === 'screenshot').length}
                             </p>
@@ -936,7 +936,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                       <div className="bg-white rounded-xl border border-acme-gray-200 p-3 shadow-sm">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-[10px] font-semibold text-acme-gray-500 uppercase tracking-wider">Code Files</p>
+                            <p className="text-xs font-semibold text-acme-gray-500 uppercase tracking-wider">Code Files</p>
                             <p className="text-sm font-bold text-amber-600 mt-1">
                               {artifacts.artifacts.filter(a => a.type === 'code').length}
                             </p>
@@ -949,7 +949,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                       <div className="bg-white rounded-xl border border-acme-gray-200 p-3 shadow-sm">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-[10px] font-semibold text-acme-gray-500 uppercase tracking-wider">Reports</p>
+                            <p className="text-xs font-semibold text-acme-gray-500 uppercase tracking-wider">Reports</p>
                             <p className="text-sm font-bold text-emerald-600 mt-1">
                               {artifacts.artifacts.filter(a => a.type === 'report').length}
                             </p>
@@ -968,7 +968,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                         <div className="flex items-center gap-2">
                           <i className="fas fa-folder-open text-acme-navy"></i>
                           <span className="text-sm font-semibold text-acme-gray-800">Available Files</span>
-                          <span className="px-2 py-0.5 bg-acme-navy/10 text-acme-navy text-[10px] font-bold rounded-full">
+                          <span className="px-2 py-0.5 bg-acme-navy/10 text-acme-navy text-xs font-bold rounded-full">
                             {artifacts.artifacts.length}
                           </span>
                         </div>
@@ -1009,7 +1009,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                               </div>
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm font-medium text-acme-gray-800 truncate">{artifact.name}</p>
-                                <p className="text-[10px] text-acme-gray-500 font-mono truncate">{artifact.path}</p>
+                                <p className="text-xs text-acme-gray-500 font-mono truncate">{artifact.path}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-3 flex-shrink-0">
@@ -1018,7 +1018,7 @@ const ArtifactsViewer: React.FC<ArtifactsViewerProps> = ({
                                   {formatFileSize(artifact.size)}
                                 </span>
                               )}
-                              <span className={`text-[10px] font-medium px-2 py-1 rounded-lg uppercase ${
+                              <span className={`text-xs font-medium px-2 py-1 rounded-lg uppercase ${
                                 artifact.type === 'screenshot' ? 'bg-violet-100 text-violet-700' :
                                 artifact.type === 'code' ? 'bg-amber-100 text-amber-700' :
                                 artifact.type === 'report' ? 'bg-emerald-100 text-emerald-700' :

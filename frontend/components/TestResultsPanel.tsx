@@ -110,9 +110,9 @@ const TestResultsPanel: React.FC<TestResultsPanelProps> = ({
           {/* Steps Widget */}
           <div className="bg-white rounded-xl border border-acme-gray-200 p-3 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-semibold text-acme-gray-600 uppercase tracking-wider">Steps</span>
+              <span className="text-xs font-semibold text-acme-gray-600 uppercase tracking-wider">Steps</span>
               <div className="w-6 h-6 rounded-lg bg-acme-navy/10 flex items-center justify-center">
-                <i className="fas fa-layer-group text-[10px] text-acme-navy"></i>
+                <i className="fas fa-layer-group text-xs text-acme-navy"></i>
               </div>
             </div>
             <div className="flex items-baseline gap-1">
@@ -124,9 +124,9 @@ const TestResultsPanel: React.FC<TestResultsPanelProps> = ({
           {/* Passed Widget */}
           <div className="bg-white rounded-xl border border-acme-gray-200 p-3 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-semibold text-acme-gray-600 uppercase tracking-wider">Passed</span>
+              <span className="text-xs font-semibold text-acme-gray-600 uppercase tracking-wider">Passed</span>
               <div className="w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center">
-                <i className="fas fa-check text-[10px] text-emerald-600"></i>
+                <i className="fas fa-check text-xs text-emerald-600"></i>
               </div>
             </div>
             <div className="flex items-baseline gap-1">
@@ -138,9 +138,9 @@ const TestResultsPanel: React.FC<TestResultsPanelProps> = ({
           {/* Failed Widget */}
           <div className="bg-white rounded-xl border border-acme-gray-200 p-3 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-semibold text-acme-gray-600 uppercase tracking-wider">Failed</span>
+              <span className="text-xs font-semibold text-acme-gray-600 uppercase tracking-wider">Failed</span>
               <div className="w-6 h-6 rounded-lg bg-acme-red/10 flex items-center justify-center">
-                <i className="fas fa-times text-[10px] text-acme-red"></i>
+                <i className="fas fa-times text-xs text-acme-red"></i>
               </div>
             </div>
             <div className="flex items-baseline gap-1">
@@ -152,9 +152,9 @@ const TestResultsPanel: React.FC<TestResultsPanelProps> = ({
           {/* Success Rate Widget */}
           <div className="bg-white rounded-xl border border-acme-gray-200 p-3 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-semibold text-acme-gray-600 uppercase tracking-wider">Success</span>
+              <span className="text-xs font-semibold text-acme-gray-600 uppercase tracking-wider">Success</span>
               {isRunning && (
-                <i className="fas fa-spinner fa-spin text-[10px] text-acme-navy"></i>
+                <i className="fas fa-spinner fa-spin text-xs text-acme-navy"></i>
               )}
             </div>
             <div className="flex items-baseline gap-1">
@@ -250,10 +250,10 @@ const TestResultsPanel: React.FC<TestResultsPanelProps> = ({
                   {/* Step Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[10px] font-bold text-acme-navy bg-acme-navy/10 px-2 py-0.5 rounded-full">
+                      <span className="text-xs font-bold text-acme-navy bg-acme-navy/10 px-2 py-0.5 rounded-full">
                         STEP {step.stepNumber}
                       </span>
-                      <span className="text-[10px] text-acme-gray-500">
+                      <span className="text-xs text-acme-gray-500">
                         {step.actions.length} action{step.actions.length !== 1 ? 's' : ''}
                       </span>
                     </div>
@@ -276,7 +276,7 @@ const TestResultsPanel: React.FC<TestResultsPanelProps> = ({
                         {step.actions.map((action, idx) => (
                           <div key={idx} className="flex items-start gap-2 text-xs min-w-0">
                             <div className="w-5 h-5 rounded-md bg-amber-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <i className="fas fa-bolt text-amber-600 text-[8px]"></i>
+                              <i className="fas fa-bolt text-amber-600 text-[10px]"></i>
                             </div>
                             <span className="text-acme-gray-700 leading-relaxed break-words min-w-0">{action}</span>
                           </div>
@@ -318,8 +318,8 @@ const TestResultsPanel: React.FC<TestResultsPanelProps> = ({
             <span className="font-medium">{stats.totalSteps}</span> steps
           </span>
         </div>
-        <span className="text-acme-gray-500 text-[10px]">
-          Updated {new Date().toLocaleTimeString()}
+        <span className="text-acme-gray-500 text-xs">
+          Acme UI Testing
         </span>
       </div>
     </div>

@@ -108,7 +108,7 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onClose, onRerun }) => 
   const [replayRunning, setReplayRunning] = useState<string | null>(null);
   const [replayProgress, setReplayProgress] = useState<{ step: number; total: number } | null>(null);
   const [replayResult, setReplayResult] = useState<ReplayResult | null>(null);
-  const [replayHeadless, setReplayHeadless] = useState(true);
+  const [replayHeadless, setReplayHeadless] = useState(false);
   const replayCleanupRef = useRef<(() => void) | null>(null);
 
   // Filter sessions based on search query
@@ -297,8 +297,8 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onClose, onRerun }) => 
             <i className="fas fa-arrow-left text-[10px]"></i>
             <span>Back</span>
           </button>
-          <span className="text-[10px] font-mono text-acme-gray-500 bg-acme-gray-50 px-2 py-0.5 rounded">
-            {selectedSession.substring(0, 12)}...
+          <span className="text-xs font-mono text-acme-gray-500 bg-acme-gray-50 px-2 py-0.5 rounded">
+            {selectedSession.substring(0, 12)}
           </span>
         </div>
 
@@ -341,35 +341,49 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onClose, onRerun }) => 
                 Replay
               </button>
             </div>
-            <span className="text-[10px] text-acme-gray-500 hidden lg:inline">
+            <span className="text-xs text-acme-gray-500 hidden lg:inline">
               {viewMode === 'sessions'
                 ? `${stats.total} sessions`
                 : `${replaySessions.length} recordings`}
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             {viewMode === 'replay' && (
-              <button
-                onClick={() => setReplayHeadless(!replayHeadless)}
-                className={`px-2 py-1 rounded-lg flex items-center gap-1 text-[10px] font-medium transition-all ${
-                  replayHeadless
-                    ? 'bg-acme-navy/10 text-acme-navy'
-                    : 'bg-acme-gray-50 text-acme-gray-600 hover:bg-acme-gray-100'
-                }`}
-                title={replayHeadless ? 'Browser hidden' : 'Browser visible'}
-              >
-                <i className={`fas ${replayHeadless ? 'fa-eye-slash' : 'fa-eye'} text-[9px]`}></i>
-                {replayHeadless ? 'Headless' : 'Visible'}
-              </button>
+              <div className="flex items-center gap-1 bg-acme-gray-100 rounded-lg p-0.5">
+                <button
+                  onClick={() => setReplayHeadless(false)}
+                  className={`px-2.5 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
+                    !replayHeadless
+                      ? 'bg-white text-acme-navy shadow-sm'
+                      : 'text-acme-gray-500 hover:text-acme-gray-700'
+                  }`}
+                  title="Browser window visible during replay"
+                >
+                  <i className="fas fa-eye text-[10px]"></i>
+                  Visible
+                </button>
+                <button
+                  onClick={() => setReplayHeadless(true)}
+                  className={`px-2.5 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
+                    replayHeadless
+                      ? 'bg-white text-acme-navy shadow-sm'
+                      : 'text-acme-gray-500 hover:text-acme-gray-700'
+                  }`}
+                  title="Browser hidden during replay"
+                >
+                  <i className="fas fa-eye-slash text-[10px]"></i>
+                  Headless
+                </button>
+              </div>
             )}
             <button
               onClick={viewMode === 'sessions' ? fetchSessions : fetchReplaySessions}
               disabled={loading || replayLoading}
-              className="w-7 h-7 rounded-lg flex items-center justify-center bg-acme-gray-50 hover:bg-acme-gray-100 text-acme-gray-500 hover:text-acme-gray-700 transition-all"
+              className="w-8 h-8 rounded-lg flex items-center justify-center bg-acme-gray-50 hover:bg-acme-gray-100 text-acme-gray-500 hover:text-acme-gray-700 transition-all disabled:opacity-50"
               title="Refresh"
             >
-              <i className={`fas fa-sync-alt text-[10px] ${(loading || replayLoading) ? 'fa-spin' : ''}`}></i>
+              <i className={`fas fa-sync-alt text-xs ${(loading || replayLoading) ? 'fa-spin' : ''}`}></i>
             </button>
           </div>
         </div>
@@ -400,7 +414,7 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onClose, onRerun }) => 
 
           {/* Sort Dropdown */}
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-acme-gray-600 uppercase tracking-wider font-medium">Sort:</span>
+            <span className="text-xs text-acme-gray-600 font-medium">Sort:</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
@@ -521,17 +535,17 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onClose, onRerun }) => 
                     <div className="flex items-center gap-2 mb-1">
                       {/* Status Badge */}
                       {session.has_report ? (
-                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-semibold rounded-full flex items-center gap-1">
-                          <i className="fas fa-check-circle text-[8px]"></i>
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[11px] font-semibold rounded-full flex items-center gap-1">
+                          <i className="fas fa-check-circle text-[10px]"></i>
                           Complete
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-semibold rounded-full flex items-center gap-1">
-                          <i className="fas fa-clock text-[8px]"></i>
+                        <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[11px] font-semibold rounded-full flex items-center gap-1">
+                          <i className="fas fa-clock text-[10px]"></i>
                           Pending
                         </span>
                       )}
-                      <span className="text-[10px] font-mono text-acme-gray-500">
+                      <span className="text-[11px] font-mono text-acme-gray-500">
                         {session.session_id.substring(0, 8)}
                       </span>
                     </div>
@@ -546,7 +560,7 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onClose, onRerun }) => 
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[10px] text-acme-gray-600 bg-acme-gray-50 px-2 py-1 rounded-lg">
+                    <span className="text-xs text-acme-gray-600 bg-acme-gray-50 px-2 py-1 rounded-lg">
                       {formatRelativeTime(session.created_at)}
                     </span>
                     {onRerun && session.task && (
@@ -583,13 +597,13 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onClose, onRerun }) => 
                     {/* Status Badge Overlay */}
                     <div className="absolute top-2 left-2">
                       {session.has_report ? (
-                        <span className="px-2 py-0.5 bg-emerald-500 text-white text-[10px] font-semibold rounded-full flex items-center gap-1 shadow-sm">
-                          <i className="fas fa-check text-[8px]"></i>
+                        <span className="px-2 py-0.5 bg-emerald-500 text-white text-[11px] font-semibold rounded-full flex items-center gap-1 shadow-sm">
+                          <i className="fas fa-check text-[10px]"></i>
                           Pass
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 bg-amber-500 text-white text-[10px] font-semibold rounded-full flex items-center gap-1 shadow-sm">
-                          <i className="fas fa-clock text-[8px]"></i>
+                        <span className="px-2 py-0.5 bg-amber-500 text-white text-[11px] font-semibold rounded-full flex items-center gap-1 shadow-sm">
+                          <i className="fas fa-clock text-[10px]"></i>
                           Pending
                         </span>
                       )}
@@ -608,10 +622,10 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onClose, onRerun }) => 
                       {session.task || 'No task description'}
                     </p>
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-acme-gray-500 font-mono">
+                      <span className="text-[11px] text-acme-gray-500 font-mono">
                         {session.session_id.substring(0, 8)}
                       </span>
-                      <span className="text-[10px] text-acme-gray-500">
+                      <span className="text-[11px] text-acme-gray-500">
                         {formatRelativeTime(session.created_at)}
                       </span>
                     </div>
@@ -671,13 +685,13 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onClose, onRerun }) => 
                 }`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <i className={`fas ${replayResult.success ? 'fa-check-circle text-emerald-600' : 'fa-times-circle text-red-600'}`}></i>
-                      <span className={`text-xs font-semibold ${replayResult.success ? 'text-emerald-800' : 'text-red-800'}`}>
+                      <i className={`fas ${replayResult.success ? 'fa-check-circle text-emerald-600' : 'fa-times-circle text-red-600'} text-sm`}></i>
+                      <span className={`text-sm font-semibold ${replayResult.success ? 'text-emerald-800' : 'text-red-800'}`}>
                         {replayResult.success ? 'Replay Passed' : 'Replay Failed'}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 text-[10px]">
-                      <span className={replayResult.success ? 'text-emerald-700' : 'text-red-700'}>
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className={`font-medium ${replayResult.success ? 'text-emerald-700' : 'text-red-700'}`}>
                         {replayResult.actions_succeeded}/{replayResult.actions_total} actions
                       </span>
                       <span className={replayResult.success ? 'text-emerald-600' : 'text-red-600'}>
@@ -685,14 +699,15 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onClose, onRerun }) => 
                       </span>
                       <button
                         onClick={() => setReplayResult(null)}
-                        className="text-acme-gray-500 hover:text-acme-gray-700"
+                        className="w-6 h-6 rounded-md flex items-center justify-center text-acme-gray-400 hover:bg-acme-gray-100 hover:text-acme-gray-700 transition-all"
+                        title="Dismiss"
                       >
-                        <i className="fas fa-times"></i>
+                        <i className="fas fa-times text-xs"></i>
                       </button>
                     </div>
                   </div>
                   {replayResult.errors.length > 0 && (
-                    <div className="mt-2 text-[10px] text-red-700">
+                    <div className="mt-2 text-xs text-red-700 space-y-0.5">
                       {replayResult.errors.slice(0, 2).map((err, i) => (
                         <div key={i} className="truncate">{err}</div>
                       ))}
@@ -731,9 +746,9 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onClose, onRerun }) => 
                         {session.task.length > 50 ? session.task.substring(0, 50) + '...' : session.task}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] text-acme-gray-500">
-                      <span>{session.action_count} actions</span>
-                      <span>•</span>
+                    <div className="flex items-center gap-2 text-xs text-acme-gray-500">
+                      <span className="font-medium text-acme-gray-600">{session.action_count} actions</span>
+                      <span>·</span>
                       <span className="truncate">{session.initial_url}</span>
                     </div>
                     {/* Progress Bar */}
@@ -746,7 +761,7 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onClose, onRerun }) => 
                               style={{ width: `${(replayProgress.step / replayProgress.total) * 100}%` }}
                             />
                           </div>
-                          <span className="text-[10px] font-medium text-acme-navy">
+                          <span className="text-xs font-medium text-acme-navy">
                             {replayProgress.step}/{replayProgress.total}
                           </span>
                         </div>
@@ -761,7 +776,7 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onClose, onRerun }) => 
                         onClick={handleStopReplay}
                         className="h-8 px-3 rounded-lg flex items-center gap-1.5 bg-red-500 text-white hover:bg-red-600 text-xs font-medium transition-all"
                       >
-                        <i className="fas fa-stop text-[9px]"></i>
+                        <i className="fas fa-stop text-[10px]"></i>
                         Stop
                       </button>
                     ) : (
@@ -773,8 +788,9 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onClose, onRerun }) => 
                             ? 'bg-acme-gray-100 text-acme-gray-400 cursor-not-allowed'
                             : 'bg-acme-navy text-white hover:bg-acme-navy-dark'
                         }`}
+                        title={replayRunning !== null ? 'Another replay is running' : 'Run replay'}
                       >
-                        <i className="fas fa-play text-[9px]"></i>
+                        <i className="fas fa-play text-[10px]"></i>
                         Run
                       </button>
                     )}
@@ -787,13 +803,12 @@ const SessionBrowser: React.FC<SessionBrowserProps> = ({ onClose, onRerun }) => 
       </div>
 
       {/* Footer */}
-      {sortedSessions.length > 0 && (
-        <div className="px-4 py-2 bg-acme-gray-50 border-t border-acme-gray-100 flex items-center justify-between text-[10px] text-acme-gray-600 flex-shrink-0">
+      {viewMode === 'sessions' && sortedSessions.length > 0 && (
+        <div className="px-4 py-2 bg-acme-gray-50 border-t border-acme-gray-100 flex items-center text-xs text-acme-gray-500 flex-shrink-0">
           <span>
-            Showing {sortedSessions.length} of {sessions.length} sessions
-          </span>
-          <span>
-            {new Date().toLocaleTimeString()}
+            {filteredSessions.length < sessions.length
+              ? `${filteredSessions.length} of ${sessions.length} sessions`
+              : `${sessions.length} sessions`}
           </span>
         </div>
       )}

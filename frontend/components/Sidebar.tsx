@@ -41,7 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-3 space-y-1">
         {!collapsed && (
-          <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-3 px-2">Applications</p>
+          <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3 px-2">Applications</p>
         )}
         {apps.map((app) => (
           <div key={app.id} className="relative group">
@@ -92,7 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           {!collapsed && (
             <div className="overflow-hidden">
               <p className="text-xs font-medium truncate text-white/90">Workspace User</p>
-              <p className="text-[10px] text-white/50 truncate">Connected</p>
+              <p className="text-xs text-white/50 truncate">Connected</p>
             </div>
           )}
         </div>

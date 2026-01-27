@@ -140,14 +140,14 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, maxSteps = 30, currentStep 
         className="group flex items-start gap-3 py-2 px-3 border-b border-acme-navy-dark/50 hover:bg-acme-navy-dark/30 transition-colors animate-logEntryIn"
       >
         {/* Timestamp */}
-        <span className="text-acme-gray-400 shrink-0 text-[10px] font-mono pt-0.5">
+        <span className="text-acme-gray-400 shrink-0 text-[11px] font-mono pt-0.5">
           {log.timestamp}
         </span>
 
         {/* Event Type Badge */}
         <div className={`shrink-0 flex items-center gap-1.5 px-2 py-0.5 rounded-full ${config.bgColor}`}>
-          <i className={`fas ${config.icon} ${config.color} text-[8px]`}></i>
-          <span className={`${config.color} text-[10px] font-bold uppercase tracking-wider`}>
+          <i className={`fas ${config.icon} ${config.color} text-[10px]`}></i>
+          <span className={`${config.color} text-[11px] font-bold uppercase tracking-wider`}>
             {config.label}
           </span>
         </div>
@@ -161,7 +161,7 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, maxSteps = 30, currentStep 
         <div className="shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={() => copyLogEntry(log, index)}
-            className={`text-[10px] w-6 h-6 rounded flex items-center justify-center transition-all ${
+            className={`text-xs w-6 h-6 rounded flex items-center justify-center transition-all ${
               copiedIndex === index
                 ? 'bg-emerald-500/20 text-emerald-400'
                 : 'bg-acme-navy-dark text-acme-gray-400 hover:text-white hover:bg-acme-navy-light'
@@ -174,7 +174,7 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, maxSteps = 30, currentStep 
 
         {/* Step indicator */}
         {log.step !== undefined && (
-          <span className="text-acme-gray-300 text-[10px] font-mono shrink-0 bg-acme-navy-dark px-1.5 py-0.5 rounded">
+          <span className="text-acme-gray-300 text-[11px] font-mono shrink-0 bg-acme-navy-dark px-1.5 py-0.5 rounded">
             #{log.step}
           </span>
         )}
@@ -218,11 +218,11 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, maxSteps = 30, currentStep 
                 {/* Step Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-[10px] font-bold text-sky-400 uppercase tracking-wider">
+                    <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider">
                       Step {stepNum}
                     </span>
-                    <span className="text-[10px] text-acme-gray-400">
-                      • {actionCount} action{actionCount !== 1 ? 's' : ''}
+                    <span className="text-[11px] text-acme-gray-400">
+                      · {actionCount} action{actionCount !== 1 ? 's' : ''}
                     </span>
                   </div>
                   {firstThinking && (
@@ -235,12 +235,12 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, maxSteps = 30, currentStep 
                 {/* Stats */}
                 <div className="flex items-center gap-2">
                   {hasError && (
-                    <span className="px-2 py-1 rounded-full bg-acme-red/20 text-acme-red text-[10px] font-medium">
+                    <span className="px-2 py-1 rounded-full bg-acme-red/20 text-acme-red text-xs font-medium">
                       <i className="fas fa-exclamation-triangle mr-1"></i>
                       Error
                     </span>
                   )}
-                  <span className="px-2 py-1 rounded-full bg-acme-navy-light text-acme-gray-300 text-[10px]">
+                  <span className="px-2 py-1 rounded-full bg-acme-navy-light text-acme-gray-300 text-xs">
                     {stepLogs.length} events
                   </span>
                 </div>
@@ -289,7 +289,7 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, maxSteps = 30, currentStep 
           {/* Step Progress */}
           {currentStep > 0 && (
             <div className="flex items-center gap-2 ml-3 pl-3 border-l border-acme-navy-light/30">
-              <span className="text-[10px] font-mono text-acme-gray-300">
+              <span className="text-xs font-mono text-acme-gray-300">
                 Step <span className="text-sky-400 font-bold">{currentStep}</span>
                 <span className="text-acme-gray-400"> / {maxSteps}</span>
               </span>
@@ -309,7 +309,7 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, maxSteps = 30, currentStep 
           <div className="flex bg-acme-navy rounded-lg p-0.5 mr-2">
             <button
               onClick={() => setViewMode('stream')}
-              className={`px-2.5 py-1 text-[10px] rounded-md font-medium transition-all ${
+              className={`px-2.5 py-1 text-xs rounded-md font-medium transition-all ${
                 viewMode === 'stream'
                   ? 'bg-acme-navy-light text-white shadow-sm'
                   : 'text-acme-gray-300 hover:text-white'
@@ -320,7 +320,7 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, maxSteps = 30, currentStep 
             </button>
             <button
               onClick={() => setViewMode('grouped')}
-              className={`px-2.5 py-1 text-[10px] rounded-md font-medium transition-all ${
+              className={`px-2.5 py-1 text-xs rounded-md font-medium transition-all ${
                 viewMode === 'grouped'
                   ? 'bg-acme-navy-light text-white shadow-sm'
                   : 'text-acme-gray-300 hover:text-white'
@@ -416,12 +416,12 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, maxSteps = 30, currentStep 
 
             {/* Level Filters */}
             <div className="flex items-center gap-1">
-              <span className="text-[10px] text-acme-gray-300 mr-2 uppercase tracking-wider font-medium">Level:</span>
+              <span className="text-xs text-acme-gray-300 mr-2 uppercase tracking-wider font-medium">Level:</span>
               {(['info', 'success', 'warn', 'error', 'debug'] as LogLevel[]).map((level) => (
                 <button
                   key={level}
                   onClick={() => toggleLevelFilter(level)}
-                  className={`px-2.5 py-1 text-[10px] rounded-lg font-medium transition-all ${
+                  className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
                     levelFilters.has(level)
                       ? LEVEL_CONFIG[level].badge
                       : 'text-acme-gray-400 bg-acme-navy hover:bg-acme-navy-light hover:text-acme-gray-200'
@@ -439,7 +439,7 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, maxSteps = 30, currentStep 
                   setLevelFilters(new Set(['info', 'success', 'warn', 'error', 'debug']));
                   setSearchText('');
                 }}
-                className="text-[10px] text-acme-gray-300 hover:text-white transition-colors font-medium"
+                className="text-xs text-acme-gray-300 hover:text-white transition-colors font-medium"
               >
                 <i className="fas fa-undo mr-1"></i>
                 Reset
@@ -481,19 +481,19 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, maxSteps = 30, currentStep 
                   <i className="fas fa-terminal text-2xl text-acme-gray-500 animate-float"></i>
                 </div>
                 <h3 className="text-sm font-semibold text-acme-gray-300 mb-2">Ready to Execute</h3>
-                <div className="flex items-center gap-3 text-[11px] text-acme-gray-400 mb-1">
+                <div className="flex items-center gap-3 text-xs text-acme-gray-400 mb-1">
                   <span className="flex items-center gap-1.5">
-                    <span className="w-5 h-5 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center text-[9px] font-bold">1</span>
+                    <span className="w-5 h-5 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center text-[10px] font-bold">1</span>
                     Describe your test
                   </span>
-                  <i className="fas fa-arrow-right text-[8px] text-acme-gray-500"></i>
+                  <i className="fas fa-arrow-right text-[10px] text-acme-gray-500"></i>
                   <span className="flex items-center gap-1.5">
-                    <span className="w-5 h-5 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center text-[9px] font-bold">2</span>
+                    <span className="w-5 h-5 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center text-[10px] font-bold">2</span>
                     Click Run
                   </span>
-                  <i className="fas fa-arrow-right text-[8px] text-acme-gray-500"></i>
+                  <i className="fas fa-arrow-right text-[10px] text-acme-gray-500"></i>
                   <span className="flex items-center gap-1.5">
-                    <span className="w-5 h-5 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center text-[9px] font-bold">3</span>
+                    <span className="w-5 h-5 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center text-[10px] font-bold">3</span>
                     See results
                   </span>
                 </div>
@@ -520,7 +520,7 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, maxSteps = 30, currentStep 
       {/* Footer Stats Bar */}
       {logs.length > 0 && (
         <div className="px-4 py-2 bg-acme-navy-dark border-t border-acme-navy-light/30 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-4 text-[10px]">
+          <div className="flex items-center gap-4 text-xs">
             <span className="text-acme-gray-300">
               <i className="fas fa-list mr-1.5 text-acme-gray-400"></i>
               <span className="font-semibold text-acme-gray-200">{filteredLogs.length}</span> events
@@ -531,7 +531,7 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, maxSteps = 30, currentStep 
             </span>
           </div>
 
-          <div className="flex items-center gap-3 text-[10px]">
+          <div className="flex items-center gap-3 text-xs">
             {successCount > 0 && (
               <span className="flex items-center gap-1.5 text-emerald-400">
                 <i className="fas fa-check-circle"></i>
@@ -544,9 +544,6 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, maxSteps = 30, currentStep 
                 {errorCount}
               </span>
             )}
-            <span className="text-acme-gray-400 text-[9px]">
-              {new Date().toLocaleTimeString()}
-            </span>
           </div>
         </div>
       )}

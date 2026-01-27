@@ -495,7 +495,7 @@ const UIAutomator: React.FC = () => {
                 )}
 
                 {/* Character count */}
-                <div className="absolute bottom-2 right-2 text-[10px] text-acme-gray-500 font-medium">
+                <div className="absolute bottom-2 right-2 text-xs text-acme-gray-400">
                   {prompt.length > 0 && <span>{prompt.length} chars</span>}
                 </div>
               </div>
@@ -516,9 +516,9 @@ const UIAutomator: React.FC = () => {
                           : 'bg-acme-gray-100 text-acme-gray-700 hover:bg-acme-gray-200 hover:text-acme-gray-900'
                       }`}
                     >
-                      <i className="fas fa-clock-rotate-left text-[10px]"></i>
+                      <i className="fas fa-clock-rotate-left text-[11px]"></i>
                       <span>Recent</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                      <span className={`px-1.5 py-0.5 rounded text-[11px] font-semibold ${
                         showRecentTasks ? 'bg-white/20' : 'bg-acme-gray-200 text-acme-gray-600'
                       }`}>{recentTasks.length}</span>
                     </button>
@@ -536,7 +536,7 @@ const UIAutomator: React.FC = () => {
                               localStorage.removeItem('recentTasks');
                               setShowRecentTasks(false);
                             }}
-                            className="text-[10px] text-acme-gray-600 hover:text-acme-red px-2 py-1 rounded hover:bg-acme-red/5 transition-colors font-medium"
+                            className="text-xs text-acme-gray-600 hover:text-acme-red px-2 py-1 rounded hover:bg-acme-red/5 transition-colors font-medium"
                           >
                             Clear All
                           </button>
@@ -564,7 +564,7 @@ const UIAutomator: React.FC = () => {
                 )}
 
                 {/* Example scenarios hint */}
-                <div className="hidden md:flex items-center gap-1.5 text-[10px] text-acme-gray-600">
+                <div className="hidden md:flex items-center gap-1.5 text-xs text-acme-gray-500">
                   <i className="fas fa-lightbulb text-amber-500"></i>
                   <span>Tip: Be specific about elements, actions, and expected outcomes</span>
                 </div>
@@ -573,7 +573,7 @@ const UIAutomator: React.FC = () => {
               {/* Right: Status indicator */}
               <div className="flex items-center gap-2">
                 {prompt && (
-                  <span className="text-[10px] text-emerald-700 font-medium bg-emerald-50 px-2 py-1 rounded-lg flex items-center gap-1">
+                  <span className="text-xs text-emerald-700 font-medium bg-emerald-50 px-2 py-1 rounded-lg flex items-center gap-1">
                     <i className="fas fa-check-circle"></i>
                     Ready
                   </span>
@@ -598,10 +598,10 @@ const UIAutomator: React.FC = () => {
                 value={extractSchema}
                 onChange={(e) => setExtractSchema(e.target.value)}
                 placeholder='{"name": "...", "price": "..."}'
-                className="col-span-1 row-span-2 p-2 bg-acme-gray-50 border border-acme-gray-200 rounded-lg text-[10px] font-mono focus:ring-1 focus:ring-acme-navy outline-none resize-none h-[52px]"
+                className="col-span-1 row-span-2 p-2 bg-acme-gray-50 border border-acme-gray-200 rounded-lg text-xs font-mono focus:ring-1 focus:ring-acme-navy outline-none resize-none h-[52px]"
               />
               <div className="flex items-center gap-1">
-                <span className="text-[9px] text-acme-gray-600 font-medium">Max:</span>
+                <span className="text-xs text-acme-gray-600 font-medium">Max:</span>
                 <input
                   type="number"
                   value={extractMaxItems}
@@ -635,7 +635,7 @@ const UIAutomator: React.FC = () => {
               <option value="deep">Deep</option>
             </select>
             <div className="flex items-center gap-1">
-              <span className="text-[9px] text-acme-gray-600 font-medium">Sources:</span>
+              <span className="text-xs text-acme-gray-600 font-medium">Sources:</span>
               <input
                 type="number"
                 value={researchMaxSources}
@@ -718,13 +718,13 @@ const UIAutomator: React.FC = () => {
                 onClick={() => setMode(m.id)}
                 disabled={loading}
                 title={m.description}
-                className={`relative z-10 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors duration-200 flex items-center gap-1.5 btn-press ${
+                className={`relative z-10 px-2.5 py-1 rounded-md text-xs font-medium transition-colors duration-200 flex items-center gap-1.5 btn-press ${
                   mode === m.id
                     ? 'text-white'
                     : 'text-acme-gray-700 hover:text-acme-gray-900'
                 } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                <i className={`fas ${m.icon} text-[9px]`}></i>
+                <i className={`fas ${m.icon} text-[10px]`}></i>
                 <span>{m.name}</span>
               </button>
             ))}
@@ -733,7 +733,7 @@ const UIAutomator: React.FC = () => {
           {/* Center: Settings (compact) */}
           <div className="flex items-center gap-2 text-xs">
             <div className="flex items-center gap-2 px-2.5 py-1.5 bg-acme-gray-50 rounded-lg border border-acme-gray-200">
-              <span className="text-acme-gray-700 text-[10px] font-semibold">Max Steps</span>
+              <span className="text-acme-gray-700 text-xs font-semibold">Max Steps</span>
               <input
                 type="number" min="5" max="200" step="5" value={maxSteps}
                 onChange={(e) => {
@@ -747,26 +747,41 @@ const UIAutomator: React.FC = () => {
                 <button
                   onClick={() => setMaxSteps(currentMode?.suggestedSteps || 30)}
                   disabled={loading}
-                  className="text-[9px] text-acme-navy hover:text-acme-navy-light font-medium px-1.5 py-0.5 bg-acme-navy/5 hover:bg-acme-navy/10 rounded transition-colors"
+                  className="text-[11px] text-acme-navy hover:text-acme-navy-light font-medium px-1.5 py-0.5 bg-acme-navy/5 hover:bg-acme-navy/10 rounded transition-colors"
                   title={`Reset to suggested value for ${currentMode?.name}`}
                 >
                   Use {currentMode?.suggestedSteps}
                 </button>
               )}
             </div>
-            <button
-              onClick={() => setHeadless(!headless)}
-              disabled={loading}
-              className={`flex items-center gap-1 px-2 py-1 rounded-md transition-all text-[10px] font-medium ${
-                headless
-                  ? 'bg-acme-navy/10 text-acme-navy'
-                  : 'bg-acme-gray-50 text-acme-gray-700 hover:bg-acme-gray-100'
-              }`}
-              title="Run without browser window"
-            >
-              <i className={`fas ${headless ? 'fa-eye-slash' : 'fa-eye'} text-[9px]`}></i>
-              {headless ? 'Hidden' : 'Visible'}
-            </button>
+            <div className="flex items-center gap-0.5 bg-acme-gray-100 rounded-lg p-0.5">
+              <button
+                onClick={() => setHeadless(false)}
+                disabled={loading}
+                className={`px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
+                  !headless
+                    ? 'bg-white text-acme-navy shadow-sm'
+                    : 'text-acme-gray-500 hover:text-acme-gray-700'
+                } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                title="Browser window visible"
+              >
+                <i className="fas fa-eye text-[10px]"></i>
+                Visible
+              </button>
+              <button
+                onClick={() => setHeadless(true)}
+                disabled={loading}
+                className={`px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
+                  headless
+                    ? 'bg-white text-acme-navy shadow-sm'
+                    : 'text-acme-gray-500 hover:text-acme-gray-700'
+                } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                title="Browser hidden"
+              >
+                <i className="fas fa-eye-slash text-[10px]"></i>
+                Hidden
+              </button>
+            </div>
           </div>
 
           {/* Right: Actions */}
@@ -797,19 +812,19 @@ const UIAutomator: React.FC = () => {
             {loading ? (
               <button
                 onClick={handleStop}
-                className="h-7 px-3 rounded-md text-[11px] font-semibold bg-acme-red text-white hover:bg-acme-red-light transition-all flex items-center gap-1.5 relative overflow-hidden btn-press animate-pulseBorder"
+                className="h-7 px-3 rounded-md text-xs font-semibold bg-acme-red text-white hover:bg-acme-red-light transition-all flex items-center gap-1.5 relative overflow-hidden btn-press animate-pulseBorder"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
-                <i className="fas fa-circle-notch fa-spin text-[9px]"></i>
+                <i className="fas fa-circle-notch fa-spin text-[10px]"></i>
                 <span>Stop</span>
               </button>
             ) : (
               <button
                 onClick={handleRun}
-                className="h-7 px-4 rounded-md text-[11px] font-semibold bg-gradient-to-r from-acme-navy to-acme-navy-light text-white hover:shadow-[0_0_15px_rgba(0,59,112,0.3)] transition-all flex items-center gap-1.5 btn-press relative overflow-hidden group"
+                className="h-7 px-4 rounded-md text-xs font-semibold bg-gradient-to-r from-acme-navy to-acme-navy-light text-white hover:shadow-[0_0_15px_rgba(0,59,112,0.3)] transition-all flex items-center gap-1.5 btn-press relative overflow-hidden group"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 group-hover:animate-shimmer"></div>
-                <i className="fas fa-play text-[9px] relative z-10"></i>
+                <i className="fas fa-play text-[10px] relative z-10"></i>
                 <span className="relative z-10">Run</span>
               </button>
             )}
@@ -827,7 +842,7 @@ const UIAutomator: React.FC = () => {
                   style={{ width: `${Math.min((currentStep / maxSteps) * 100, 100)}%` }}
                 />
               </div>
-              <span className="text-[9px] font-semibold text-acme-gray-700">
+              <span className="text-xs font-semibold text-acme-gray-700">
                 {currentStep}/{maxSteps}
               </span>
             </div>
@@ -881,12 +896,12 @@ const UIAutomator: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-acme-gray-900">Test Scenario</h3>
-                  <p className="text-[10px] text-acme-gray-600 font-medium">Describe what you want the AI agent to test</p>
+                  <p className="text-xs text-acme-gray-500">Describe what you want the AI agent to test</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-acme-gray-600 hidden sm:inline">
-                  <kbd className="px-1.5 py-0.5 bg-acme-gray-100 border border-acme-gray-200 rounded text-[9px] font-mono text-acme-gray-700">⌘↵</kbd> to run
+                <span className="text-xs text-acme-gray-500 hidden sm:inline">
+                  <kbd className="px-1.5 py-0.5 bg-acme-gray-100 border border-acme-gray-200 rounded text-[11px] font-mono text-acme-gray-700">⌘↵</kbd> to run
                 </span>
               </div>
             </div>
@@ -953,29 +968,29 @@ const UIAutomator: React.FC = () => {
                 })()}
                 <button
                   onClick={() => setOutputTab('logs')}
-                  className={`relative z-10 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors duration-200 flex items-center gap-1.5 btn-press ${
+                  className={`relative z-10 px-2.5 py-1 rounded-md text-xs font-medium transition-colors duration-200 flex items-center gap-1.5 btn-press ${
                     outputTab === 'logs'
                       ? 'text-white'
                       : 'text-acme-gray-700 hover:text-acme-gray-900'
                   }`}
                 >
-                  <i className="fas fa-terminal text-[9px]"></i>
+                  <i className="fas fa-terminal text-[10px]"></i>
                   Logs
                   {logs.length > 0 && (
-                    <span className={`px-1 py-0.5 rounded text-[9px] font-bold ${
+                    <span className={`px-1 py-0.5 rounded text-[10px] font-bold ${
                       outputTab === 'logs' ? 'bg-white/20' : 'bg-acme-gray-200 text-acme-gray-600'
                     }`}>{logs.length}</span>
                   )}
                 </button>
                 <button
                   onClick={() => setOutputTab('results')}
-                  className={`relative z-10 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors duration-200 flex items-center gap-1.5 btn-press ${
+                  className={`relative z-10 px-2.5 py-1 rounded-md text-xs font-medium transition-colors duration-200 flex items-center gap-1.5 btn-press ${
                     outputTab === 'results'
                       ? 'text-white'
                       : 'text-acme-gray-700 hover:text-acme-gray-900'
                   }`}
                 >
-                  <i className="fas fa-chart-bar text-[9px]"></i>
+                  <i className="fas fa-chart-bar text-[10px]"></i>
                   Results
                   {result && (
                     <span className={`w-1.5 h-1.5 rounded-full ${result.success ? 'bg-emerald-400' : 'bg-acme-red'}`}></span>
@@ -983,13 +998,13 @@ const UIAutomator: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setOutputTab('artifacts')}
-                  className={`relative z-10 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors duration-200 flex items-center gap-1.5 btn-press ${
+                  className={`relative z-10 px-2.5 py-1 rounded-md text-xs font-medium transition-colors duration-200 flex items-center gap-1.5 btn-press ${
                     outputTab === 'artifacts'
                       ? 'text-white'
                       : 'text-acme-gray-700 hover:text-acme-gray-900'
                   }`}
                 >
-                  <i className="fas fa-folder-open text-[9px]"></i>
+                  <i className="fas fa-folder-open text-[10px]"></i>
                   Artifacts
                 </button>
               </div>
@@ -997,7 +1012,7 @@ const UIAutomator: React.FC = () => {
                 <button
                   onClick={() => !loading && setLogs([])}
                   disabled={loading}
-                  className="px-2 py-1 text-[9px] text-acme-gray-600 hover:text-acme-red hover:bg-acme-red/5 rounded transition-all disabled:opacity-50 flex items-center gap-1"
+                  className="px-2 py-1 text-xs text-acme-gray-600 hover:text-acme-red hover:bg-acme-red/5 rounded transition-all disabled:opacity-50 flex items-center gap-1"
                 >
                   <i className="fas fa-trash-alt"></i>
                   Clear
@@ -1038,12 +1053,12 @@ const UIAutomator: React.FC = () => {
                       <i className="fas fa-images text-2xl text-acme-gray-300 animate-float"></i>
                     </div>
                     <h3 className="text-sm font-semibold text-acme-gray-800 mb-2">No Artifacts Yet</h3>
-                    <div className="flex items-center gap-3 text-[11px] text-acme-gray-500">
-                      <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-acme-navy/10 text-acme-navy flex items-center justify-center text-[9px] font-bold">1</span>Describe your test</span>
-                      <i className="fas fa-arrow-right text-[8px] text-acme-gray-300"></i>
-                      <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-acme-navy/10 text-acme-navy flex items-center justify-center text-[9px] font-bold">2</span>Click Run</span>
-                      <i className="fas fa-arrow-right text-[8px] text-acme-gray-300"></i>
-                      <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-acme-navy/10 text-acme-navy flex items-center justify-center text-[9px] font-bold">3</span>See results</span>
+                    <div className="flex items-center gap-3 text-xs text-acme-gray-500">
+                      <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-acme-navy/10 text-acme-navy flex items-center justify-center text-[10px] font-bold">1</span>Describe your test</span>
+                      <i className="fas fa-arrow-right text-[10px] text-acme-gray-300"></i>
+                      <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-acme-navy/10 text-acme-navy flex items-center justify-center text-[10px] font-bold">2</span>Click Run</span>
+                      <i className="fas fa-arrow-right text-[10px] text-acme-gray-300"></i>
+                      <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-acme-navy/10 text-acme-navy flex items-center justify-center text-[10px] font-bold">3</span>See results</span>
                     </div>
                   </div>
                 )}
@@ -1077,7 +1092,7 @@ const UIAutomator: React.FC = () => {
                       : 'text-acme-gray-600 hover:text-acme-gray-800 hover:bg-white'
                   }`}
                 >
-                  <i className="fas fa-clock-rotate-left text-[10px]"></i>
+                  <i className="fas fa-clock-rotate-left text-xs"></i>
                   Sessions
                 </button>
                 <button
@@ -1088,7 +1103,7 @@ const UIAutomator: React.FC = () => {
                       : 'text-acme-gray-600 hover:text-acme-gray-800 hover:bg-white'
                   }`}
                 >
-                  <i className="fas fa-code-compare text-[10px]"></i>
+                  <i className="fas fa-code-compare text-xs"></i>
                   Compare
                 </button>
               </div>
