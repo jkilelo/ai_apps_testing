@@ -46,7 +46,7 @@ const SessionThumbnail: React.FC<{ sessionId: string; className?: string }> = ({
           // Convert relative path to absolute URL
           const url = firstScreenshot.startsWith('http')
             ? firstScreenshot
-            : `http://localhost:8001${firstScreenshot.startsWith('/') ? '' : '/'}${firstScreenshot}`;
+            : `http://localhost:8000${firstScreenshot.startsWith('/') ? '' : '/'}${firstScreenshot}`;
           thumbnailCache[sessionId] = url;
           setThumbnail(url);
         } else {

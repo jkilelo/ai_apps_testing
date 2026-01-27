@@ -14,7 +14,7 @@ import {
 } from '../services/geminiService';
 
 // API base URL for building absolute URLs
-const API_BASE_URL = 'http://localhost:8001';
+const API_BASE_URL = 'http://localhost:8000';
 
 // Helper to convert backend relative URLs to absolute URLs
 const toAbsoluteUrl = (relativePath: string): string => {
