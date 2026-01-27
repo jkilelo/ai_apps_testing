@@ -13,44 +13,50 @@ import TestResultsPanel from '../components/TestResultsPanel';
 import ArtifactsViewer from '../components/ArtifactsViewer';
 import SessionBrowser from '../components/SessionBrowser';
 import SessionComparison from '../components/SessionComparison';
+import BrowserPreviewPanel, { BrowserState } from '../components/BrowserPreviewPanel';
 import { useToast } from '../components/Toast';
 import { ExecutionLog, AgentMode, EventType, LogLevel } from '../types';
 
-const MODES: { id: AgentMode; name: string; icon: string; description: string; placeholder: string }[] = [
+const MODES: { id: AgentMode; name: string; icon: string; description: string; placeholder: string; suggestedSteps: number }[] = [
   {
     id: 'basic',
     name: 'UI Test',
     icon: 'fa-vial',
     description: 'Run automated UI testing scenarios',
-    placeholder: 'Describe the UI test scenario...\n\nExample: Go to Amazon, search for "MacBook Pro M3", verify search results appear, and capture the product listing page.'
+    placeholder: 'Describe the UI test scenario...\n\nExample: Go to Amazon, search for "MacBook Pro M3", verify search results appear, and capture the product listing page.',
+    suggestedSteps: 30
   },
   {
     id: 'extract',
     name: 'Extract',
     icon: 'fa-database',
     description: 'Extract structured data from web pages',
-    placeholder: ''
+    placeholder: '',
+    suggestedSteps: 40
   },
   {
     id: 'research',
     name: 'Research',
     icon: 'fa-microscope',
     description: 'Research topics across multiple sources',
-    placeholder: ''
+    placeholder: '',
+    suggestedSteps: 50
   },
   {
     id: 'compare-products',
     name: 'Compare',
     icon: 'fa-balance-scale',
     description: 'Compare products or services',
-    placeholder: ''
+    placeholder: '',
+    suggestedSteps: 60
   },
   {
     id: 'compare-pages',
     name: 'Analyze',
     icon: 'fa-chart-line',
     description: 'Analyze and compare web pages',
-    placeholder: ''
+    placeholder: '',
+    suggestedSteps: 30
   },
 ];
 
@@ -62,8 +68,26 @@ const UIAutomator: React.FC = () => {
   const [logs, setLogs] = useState<ExecutionLog[]>([]);
   const [result, setResult] = useState<{ success: boolean; summary: string; data?: Record<string, unknown> } | null>(null);
   const [currentStep, setCurrentStep] = useState<number>(0);
-  const [showSessionBrowser, setShowSessionBrowser] = useState(false);
-  const [showComparison, setShowComparison] = useState(false);
+  const [browserState, setBrowserState] = useState<BrowserState | null>(null);
+  const [previewCollapsed, setPreviewCollapsed] = useState(false);
+
+  // Side panel state — only one panel open at a time
+  type SidePanelType = 'sessions' | 'comparison' | null;
+  const [sidePanel, setSidePanel] = useState<SidePanelType>(null);
+
+  // Success/failure ceremony state
+  const [ceremony, setCeremony] = useState<'success' | 'failure' | null>(null);
+
+  // Drag-to-resize side panel
+  const [sidePanelWidth, setSidePanelWidth] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('sidePanelWidth');
+      return saved ? Math.min(600, Math.max(320, parseInt(saved))) : 420;
+    } catch { return 420; }
+  });
+  const isDraggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartWidthRef = useRef(420);
 
   // Cleanup function ref for aborting streams
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -143,6 +167,38 @@ const UIAutomator: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [loading, mode, prompt, extractUrl, extractSchema, researchTopic_, products, aspects, pageUrls, comparisonCriteria, maxSteps]);
 
+  // Drag-to-resize side panel handlers
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      const delta = dragStartXRef.current - e.clientX;
+      const newWidth = Math.min(600, Math.max(320, dragStartWidthRef.current + delta));
+      setSidePanelWidth(newWidth);
+    };
+    const handleMouseUp = () => {
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        localStorage.setItem('sidePanelWidth', String(sidePanelWidth));
+      }
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [sidePanelWidth]);
+
+  const startDragResize = (e: React.MouseEvent) => {
+    isDraggingRef.current = true;
+    dragStartXRef.current = e.clientX;
+    dragStartWidthRef.current = sidePanelWidth;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
   const addLog = (
     message: string,
     level: LogLevel = 'info',
@@ -188,6 +244,17 @@ const UIAutomator: React.FC = () => {
         break;
       case 'step_action':
         addLog(event.message, 'info', 'step_action', event.step, event.data);
+        // Update browser preview with current action
+        if (event.data?.action) {
+          const actionData = event.data.action as { action?: string; params?: Record<string, unknown> };
+          setBrowserState(prev => ({
+            url: prev?.url || '',
+            title: prev?.title || '',
+            currentStep: event.step ?? prev?.currentStep ?? 0,
+            currentAction: actionData.action || (typeof event.data?.action === 'string' ? event.data.action : undefined),
+            actionParams: actionData.params,
+          }));
+        }
         break;
       case 'step_result':
         addLog(event.message, level, 'step_result', event.step, event.data);
@@ -196,6 +263,14 @@ const UIAutomator: React.FC = () => {
         addLog(event.message, 'info', 'browser_state', event.step, event.data);
         if (event.data?.url) {
           addLog(`${event.data.url}`, 'info', 'browser_state', event.step);
+          // Update browser preview state
+          setBrowserState(prev => ({
+            url: event.data?.url as string || prev?.url || '',
+            title: event.data?.title as string || prev?.title || '',
+            currentStep: event.step ?? prev?.currentStep ?? 0,
+            currentAction: prev?.currentAction,
+            actionParams: prev?.actionParams,
+          }));
         }
         break;
       case 'progress':
@@ -212,6 +287,9 @@ const UIAutomator: React.FC = () => {
           data: event.data,
         });
         setLoading(false);
+        // Trigger ceremony animation
+        setCeremony(event.data?.success ? 'success' : 'failure');
+        setTimeout(() => setCeremony(null), 1500);
         // Show toast notification
         if (event.data?.success) {
           addToast('success', 'Task completed successfully!');
@@ -260,6 +338,8 @@ const UIAutomator: React.FC = () => {
     setLogs([]);
     setResult(null);
     setCurrentStep(0);
+    setBrowserState(null);
+    setPreviewCollapsed(false);
 
     const modeName = MODES.find(m => m.id === mode)?.name || 'Task';
 
@@ -622,18 +702,26 @@ const UIAutomator: React.FC = () => {
       {/* TOOLBAR - Compact */}
       <div className="bg-white rounded-lg border border-acme-gray-200 shadow-sm flex-shrink-0">
         <div className="px-3 py-1.5 flex items-center justify-between gap-3">
-          {/* Left: Mode Selector */}
-          <div className="flex items-center bg-acme-gray-50 rounded-lg p-0.5">
+          {/* Left: Mode Selector with sliding pill */}
+          <div className="relative flex items-center bg-acme-gray-50 rounded-lg p-0.5">
+            {/* Sliding pill background */}
+            <div
+              className="absolute top-0.5 bottom-0.5 bg-acme-navy rounded-md shadow-sm transition-all duration-200 ease-out"
+              style={{
+                left: `${MODES.findIndex(m => m.id === mode) * (100 / MODES.length)}%`,
+                width: `${100 / MODES.length}%`,
+              }}
+            />
             {MODES.map((m) => (
               <button
                 key={m.id}
                 onClick={() => setMode(m.id)}
                 disabled={loading}
                 title={m.description}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all flex items-center gap-1.5 ${
+                className={`relative z-10 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors duration-200 flex items-center gap-1.5 btn-press ${
                   mode === m.id
-                    ? 'bg-acme-navy text-white shadow-sm'
-                    : 'text-acme-gray-700 hover:text-acme-gray-900 hover:bg-white'
+                    ? 'text-white'
+                    : 'text-acme-gray-700 hover:text-acme-gray-900'
                 } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <i className={`fas ${m.icon} text-[9px]`}></i>
@@ -644,14 +732,27 @@ const UIAutomator: React.FC = () => {
 
           {/* Center: Settings (compact) */}
           <div className="flex items-center gap-2 text-xs">
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-acme-gray-50 rounded-md">
-              <span className="text-acme-gray-600 text-[9px] font-medium">Steps</span>
+            <div className="flex items-center gap-2 px-2.5 py-1.5 bg-acme-gray-50 rounded-lg border border-acme-gray-200">
+              <span className="text-acme-gray-700 text-[10px] font-semibold">Max Steps</span>
               <input
-                type="number" min="10" max="100" step="5" value={maxSteps}
-                onChange={(e) => setMaxSteps(parseInt(e.target.value) || 30)}
+                type="number" min="5" max="200" step="5" value={maxSteps}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  setMaxSteps(isNaN(val) ? 30 : Math.min(200, Math.max(5, val)));
+                }}
                 disabled={loading}
-                className="w-8 bg-white text-acme-gray-700 font-medium text-[11px] text-center rounded border border-acme-gray-200 focus:outline-none"
+                className="w-14 h-6 bg-white text-acme-gray-800 font-semibold text-xs text-center rounded-md border border-acme-gray-300 focus:outline-none focus:ring-2 focus:ring-acme-navy/30 focus:border-acme-navy"
               />
+              {maxSteps !== currentMode?.suggestedSteps && (
+                <button
+                  onClick={() => setMaxSteps(currentMode?.suggestedSteps || 30)}
+                  disabled={loading}
+                  className="text-[9px] text-acme-navy hover:text-acme-navy-light font-medium px-1.5 py-0.5 bg-acme-navy/5 hover:bg-acme-navy/10 rounded transition-colors"
+                  title={`Reset to suggested value for ${currentMode?.name}`}
+                >
+                  Use {currentMode?.suggestedSteps}
+                </button>
+              )}
             </div>
             <button
               onClick={() => setHeadless(!headless)}
@@ -671,9 +772,9 @@ const UIAutomator: React.FC = () => {
           {/* Right: Actions */}
           <div className="flex items-center gap-1.5">
             <button
-              onClick={() => { setShowSessionBrowser(!showSessionBrowser); setShowComparison(false); }}
+              onClick={() => setSidePanel(sidePanel === 'sessions' ? null : 'sessions')}
               className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${
-                showSessionBrowser
+                sidePanel === 'sessions'
                   ? 'bg-acme-navy text-white'
                   : 'text-acme-gray-600 hover:bg-acme-gray-100 hover:text-acme-gray-800'
               }`}
@@ -682,9 +783,9 @@ const UIAutomator: React.FC = () => {
               <i className="fas fa-clock-rotate-left text-xs"></i>
             </button>
             <button
-              onClick={() => { setShowComparison(!showComparison); setShowSessionBrowser(false); }}
+              onClick={() => setSidePanel(sidePanel === 'comparison' ? null : 'comparison')}
               className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${
-                showComparison
+                sidePanel === 'comparison'
                   ? 'bg-acme-navy text-white'
                   : 'text-acme-gray-600 hover:bg-acme-gray-100 hover:text-acme-gray-800'
               }`}
@@ -696,7 +797,7 @@ const UIAutomator: React.FC = () => {
             {loading ? (
               <button
                 onClick={handleStop}
-                className="h-7 px-3 rounded-md text-[11px] font-semibold bg-acme-red text-white hover:bg-acme-red-light transition-all flex items-center gap-1.5 relative overflow-hidden"
+                className="h-7 px-3 rounded-md text-[11px] font-semibold bg-acme-red text-white hover:bg-acme-red-light transition-all flex items-center gap-1.5 relative overflow-hidden btn-press animate-pulseBorder"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
                 <i className="fas fa-circle-notch fa-spin text-[9px]"></i>
@@ -705,10 +806,11 @@ const UIAutomator: React.FC = () => {
             ) : (
               <button
                 onClick={handleRun}
-                className="h-7 px-4 rounded-md text-[11px] font-semibold bg-acme-navy text-white hover:bg-acme-navy-light transition-all flex items-center gap-1.5"
+                className="h-7 px-4 rounded-md text-[11px] font-semibold bg-gradient-to-r from-acme-navy to-acme-navy-light text-white hover:shadow-[0_0_15px_rgba(0,59,112,0.3)] transition-all flex items-center gap-1.5 btn-press relative overflow-hidden group"
               >
-                <i className="fas fa-play text-[9px]"></i>
-                Run
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 group-hover:animate-shimmer"></div>
+                <i className="fas fa-play text-[9px] relative z-10"></i>
+                <span className="relative z-10">Run</span>
               </button>
             )}
           </div>
@@ -733,150 +835,286 @@ const UIAutomator: React.FC = () => {
         )}
       </div>
 
-      {/* Session Browser (conditional) */}
-      {showSessionBrowser && (
-        <div className="flex-shrink-0">
-          <SessionBrowser
-            onClose={() => setShowSessionBrowser(false)}
-            onRerun={(task) => { setPrompt(task); setMode('basic'); setShowSessionBrowser(false); }}
-          />
-        </div>
-      )}
+      {/* BODY: Horizontal split — main content + optional side panel */}
+      <div className="flex-1 min-h-0 flex gap-2">
 
-      {/* Session Comparison (conditional) */}
-      {showComparison && (
-        <div className="flex-shrink-0">
-          <SessionComparison onClose={() => setShowComparison(false)} />
-        </div>
-      )}
+        {/* LEFT: Primary workspace */}
+        <div className="flex-1 min-w-0 flex flex-col gap-2 transition-all duration-200">
 
-      {/* MAIN CONTENT AREA */}
-      <div className="flex-1 min-h-0 flex flex-col gap-2">
-        {/* Task Input Panel - Enhanced Primary Input */}
-        <div className="bg-white rounded-xl border border-acme-gray-200 shadow-sm flex-shrink-0 overflow-hidden">
-          {/* Gradient Accent Bar */}
-          <div className="h-1 bg-gradient-to-r from-acme-navy via-acme-navy-light to-acme-navy"></div>
-
-          {/* Input Header */}
-          <div className="px-4 py-2.5 border-b border-acme-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-acme-navy to-acme-navy-light flex items-center justify-center shadow-sm">
-                <i className="fas fa-vial text-white text-xs"></i>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-acme-gray-900">Test Scenario</h3>
-                <p className="text-[10px] text-acme-gray-600 font-medium">Describe what you want the AI agent to test</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-acme-gray-600 hidden sm:inline">
-                <kbd className="px-1.5 py-0.5 bg-acme-gray-100 border border-acme-gray-200 rounded text-[9px] font-mono text-acme-gray-700">⌘↵</kbd> to run
-              </span>
-            </div>
-          </div>
-
-          {/* Input Content */}
-          <div className="p-4">
-            {renderModeInput()}
-          </div>
-        </div>
-
-        {/* OUTPUT SECTION - Maximized */}
-        <div className="flex-1 min-h-0 bg-white rounded-lg border border-acme-gray-200 shadow-sm flex flex-col overflow-hidden">
-          {/* Tab Header - Compact */}
-          <div className="px-2 py-1.5 border-b border-acme-gray-100 flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center gap-0.5">
-              <button
-                onClick={() => setOutputTab('logs')}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all flex items-center gap-1.5 ${
-                  outputTab === 'logs'
-                    ? 'bg-acme-navy text-white'
-                    : 'text-acme-gray-700 hover:text-acme-gray-900 hover:bg-acme-gray-100'
-                }`}
-              >
-                <i className="fas fa-terminal text-[9px]"></i>
-                Logs
-                {logs.length > 0 && (
-                  <span className={`px-1 py-0.5 rounded text-[9px] font-bold ${
-                    outputTab === 'logs' ? 'bg-white/20' : 'bg-acme-gray-200 text-acme-gray-600'
-                  }`}>{logs.length}</span>
-                )}
-              </button>
-              <button
-                onClick={() => setOutputTab('results')}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all flex items-center gap-1.5 ${
-                  outputTab === 'results'
-                    ? 'bg-acme-navy text-white'
-                    : 'text-acme-gray-700 hover:text-acme-gray-900 hover:bg-acme-gray-100'
-                }`}
-              >
-                <i className="fas fa-chart-bar text-[9px]"></i>
-                Results
-                {result && (
-                  <span className={`w-1.5 h-1.5 rounded-full ${result.success ? 'bg-emerald-400' : 'bg-acme-red'}`}></span>
-                )}
-              </button>
-              <button
-                onClick={() => setOutputTab('artifacts')}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all flex items-center gap-1.5 ${
-                  outputTab === 'artifacts'
-                    ? 'bg-acme-navy text-white'
-                    : 'text-acme-gray-700 hover:text-acme-gray-900 hover:bg-acme-gray-100'
-                }`}
-              >
-                <i className="fas fa-folder-open text-[9px]"></i>
-                Artifacts
-              </button>
-            </div>
-            {outputTab === 'logs' && logs.length > 0 && (
-              <button
-                onClick={() => !loading && setLogs([])}
-                disabled={loading}
-                className="px-2 py-1 text-[9px] text-acme-gray-600 hover:text-acme-red hover:bg-acme-red/5 rounded transition-all disabled:opacity-50 flex items-center gap-1"
-              >
-                <i className="fas fa-trash-alt"></i>
-                Clear
-              </button>
-            )}
-          </div>
-
-          {/* Tab Content */}
-          <div className="flex-1 min-h-0 overflow-auto">
-            {outputTab === 'logs' && (
-              <LogViewer
-                logs={logs}
-                maxSteps={maxSteps}
-                currentStep={currentStep}
+          {/* Live Browser Preview - Shows during execution */}
+          {loading && !previewCollapsed && (
+            <div className="flex-shrink-0">
+              <BrowserPreviewPanel
+                browserState={browserState}
+                isRunning={loading}
                 isInitializing={isInitializing}
-                isRunning={loading}
-              />
-            )}
-            {outputTab === 'results' && (
-              <TestResultsPanel
-                logs={logs}
-                result={result}
-                isRunning={loading}
-                currentStep={currentStep}
                 maxSteps={maxSteps}
+                onCollapse={() => setPreviewCollapsed(true)}
+                collapsed={previewCollapsed}
               />
-            )}
-            {outputTab === 'artifacts' && result && (
-              <ArtifactsViewer
-                sessionId={result.data?.session_id as string | null}
-                outputDirectory={result.data?.output_directory as string | undefined}
-              />
-            )}
-            {outputTab === 'artifacts' && !result && (
-              <div className="flex flex-col items-center justify-center h-full">
-                <div className="w-16 h-16 rounded-2xl bg-acme-gray-100 flex items-center justify-center mb-4">
-                  <i className="fas fa-images text-2xl text-acme-gray-300"></i>
+            </div>
+          )}
+
+          {/* Collapsed Preview Toggle */}
+          {loading && previewCollapsed && (
+            <button
+              onClick={() => setPreviewCollapsed(false)}
+              className="flex-shrink-0 w-full py-1.5 bg-acme-gray-800 hover:bg-acme-gray-700 rounded-lg flex items-center justify-center gap-2 text-xs text-acme-gray-400 hover:text-white transition-colors"
+            >
+              <i className="fas fa-chevron-down text-[10px]"></i>
+              <span>Show Browser Preview</span>
+              <span className="text-acme-gray-500">•</span>
+              <span className="font-mono">{browserState?.url ? (() => { try { return new URL(browserState.url).hostname; } catch { return browserState.url; } })() : 'Connecting...'}</span>
+            </button>
+          )}
+
+          {/* Task Input Panel */}
+          <div className="bg-white rounded-xl border border-acme-gray-200 shadow-sm flex-shrink-0 overflow-hidden">
+            {/* Gradient Accent Bar */}
+            <div className="h-1 bg-gradient-to-r from-acme-navy via-acme-navy-light to-acme-navy"></div>
+
+            {/* Input Header */}
+            <div className="px-4 py-2.5 border-b border-acme-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-acme-navy to-acme-navy-light flex items-center justify-center shadow-sm">
+                  <i className="fas fa-vial text-white text-xs"></i>
                 </div>
-                <h3 className="text-sm font-semibold text-acme-gray-800 mb-1">No Artifacts Yet</h3>
-                <p className="text-xs text-acme-gray-600">Run a task to generate screenshots, reports, and other artifacts</p>
+                <div>
+                  <h3 className="text-sm font-semibold text-acme-gray-900">Test Scenario</h3>
+                  <p className="text-[10px] text-acme-gray-600 font-medium">Describe what you want the AI agent to test</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-acme-gray-600 hidden sm:inline">
+                  <kbd className="px-1.5 py-0.5 bg-acme-gray-100 border border-acme-gray-200 rounded text-[9px] font-mono text-acme-gray-700">⌘↵</kbd> to run
+                </span>
+              </div>
+            </div>
+
+            {/* Input Content */}
+            <div className="p-4">
+              {renderModeInput()}
+            </div>
+          </div>
+
+          {/* OUTPUT SECTION */}
+          <div className={`flex-1 min-h-0 bg-white rounded-lg border border-acme-gray-200 shadow-sm flex flex-col overflow-hidden relative ${
+            ceremony === 'failure' ? 'animate-shake' : ''
+          }`}>
+            {/* Success ceremony overlay */}
+            {ceremony === 'success' && (
+              <div className="absolute inset-0 z-20 pointer-events-none">
+                <div className="absolute inset-0 bg-emerald-500/10 animate-successPulse" />
+                {/* Animated checkmark */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                  <svg width="48" height="48" viewBox="0 0 48 48" className="drop-shadow-lg">
+                    <circle cx="24" cy="24" r="22" fill="rgba(16,185,129,0.15)" stroke="#10b981" strokeWidth="2" />
+                    <path d="M14 24 L21 31 L34 18" fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+                      strokeDasharray="24" strokeDashoffset="24" className="animate-checkDraw" />
+                  </svg>
+                </div>
+                {/* Confetti dots */}
+                {[...Array(8)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="absolute top-1/2 left-1/2 w-2 h-2 rounded-full animate-confettiBurst"
+                    style={{
+                      background: ['#10b981', '#f59e0b', '#3b82f6', '#ec4899', '#8b5cf6', '#06b6d4', '#f97316', '#14b8a6'][i],
+                      transform: `rotate(${i * 45}deg) translateY(-30px)`,
+                      animationDelay: `${i * 0.05}s`,
+                    }}
+                  />
+                ))}
               </div>
             )}
+            {/* Failure ceremony overlay */}
+            {ceremony === 'failure' && (
+              <div className="absolute inset-0 z-20 pointer-events-none">
+                <div className="absolute inset-0 bg-red-500/10 animate-successPulse" />
+              </div>
+            )}
+
+            {/* Tab Header */}
+            <div className="px-2 py-1.5 border-b border-acme-gray-100 flex items-center justify-between flex-shrink-0">
+              <div className="relative flex items-center gap-0.5">
+                {/* Output tab sliding pill */}
+                {(() => {
+                  const tabs = ['logs', 'results', 'artifacts'] as const;
+                  const activeIdx = tabs.indexOf(outputTab);
+                  return (
+                    <div
+                      className="absolute top-0 bottom-0 bg-acme-navy rounded-md transition-all duration-200 ease-out"
+                      style={{
+                        left: `${activeIdx * 33.33}%`,
+                        width: '33.33%',
+                      }}
+                    />
+                  );
+                })()}
+                <button
+                  onClick={() => setOutputTab('logs')}
+                  className={`relative z-10 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors duration-200 flex items-center gap-1.5 btn-press ${
+                    outputTab === 'logs'
+                      ? 'text-white'
+                      : 'text-acme-gray-700 hover:text-acme-gray-900'
+                  }`}
+                >
+                  <i className="fas fa-terminal text-[9px]"></i>
+                  Logs
+                  {logs.length > 0 && (
+                    <span className={`px-1 py-0.5 rounded text-[9px] font-bold ${
+                      outputTab === 'logs' ? 'bg-white/20' : 'bg-acme-gray-200 text-acme-gray-600'
+                    }`}>{logs.length}</span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setOutputTab('results')}
+                  className={`relative z-10 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors duration-200 flex items-center gap-1.5 btn-press ${
+                    outputTab === 'results'
+                      ? 'text-white'
+                      : 'text-acme-gray-700 hover:text-acme-gray-900'
+                  }`}
+                >
+                  <i className="fas fa-chart-bar text-[9px]"></i>
+                  Results
+                  {result && (
+                    <span className={`w-1.5 h-1.5 rounded-full ${result.success ? 'bg-emerald-400' : 'bg-acme-red'}`}></span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setOutputTab('artifacts')}
+                  className={`relative z-10 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors duration-200 flex items-center gap-1.5 btn-press ${
+                    outputTab === 'artifacts'
+                      ? 'text-white'
+                      : 'text-acme-gray-700 hover:text-acme-gray-900'
+                  }`}
+                >
+                  <i className="fas fa-folder-open text-[9px]"></i>
+                  Artifacts
+                </button>
+              </div>
+              {outputTab === 'logs' && logs.length > 0 && (
+                <button
+                  onClick={() => !loading && setLogs([])}
+                  disabled={loading}
+                  className="px-2 py-1 text-[9px] text-acme-gray-600 hover:text-acme-red hover:bg-acme-red/5 rounded transition-all disabled:opacity-50 flex items-center gap-1"
+                >
+                  <i className="fas fa-trash-alt"></i>
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Tab Content with crossfade */}
+            <div className="flex-1 min-h-0 overflow-auto">
+              <div key={outputTab} className="h-full tab-content-enter">
+                {outputTab === 'logs' && (
+                  <LogViewer
+                    logs={logs}
+                    maxSteps={maxSteps}
+                    currentStep={currentStep}
+                    isInitializing={isInitializing}
+                    isRunning={loading}
+                  />
+                )}
+                {outputTab === 'results' && (
+                  <TestResultsPanel
+                    logs={logs}
+                    result={result}
+                    isRunning={loading}
+                    currentStep={currentStep}
+                    maxSteps={maxSteps}
+                  />
+                )}
+                {outputTab === 'artifacts' && result && (
+                  <ArtifactsViewer
+                    sessionId={result.data?.session_id as string | null}
+                    outputDirectory={result.data?.output_directory as string | undefined}
+                  />
+                )}
+                {outputTab === 'artifacts' && !result && (
+                  <div className="flex flex-col items-center justify-center h-full">
+                    <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-acme-gray-200 flex items-center justify-center mb-4 animate-borderPulse">
+                      <i className="fas fa-images text-2xl text-acme-gray-300 animate-float"></i>
+                    </div>
+                    <h3 className="text-sm font-semibold text-acme-gray-800 mb-2">No Artifacts Yet</h3>
+                    <div className="flex items-center gap-3 text-[11px] text-acme-gray-500">
+                      <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-acme-navy/10 text-acme-navy flex items-center justify-center text-[9px] font-bold">1</span>Describe your test</span>
+                      <i className="fas fa-arrow-right text-[8px] text-acme-gray-300"></i>
+                      <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-acme-navy/10 text-acme-navy flex items-center justify-center text-[9px] font-bold">2</span>Click Run</span>
+                      <i className="fas fa-arrow-right text-[8px] text-acme-gray-300"></i>
+                      <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-acme-navy/10 text-acme-navy flex items-center justify-center text-[9px] font-bold">3</span>See results</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* RIGHT: Side Panel — Sessions / Comparison */}
+        {sidePanel && (
+          <div
+            className="flex-shrink-0 flex flex-col bg-white rounded-xl border border-acme-gray-200 shadow-sm overflow-hidden animate-slideInRight relative"
+            style={{ width: sidePanelWidth }}
+          >
+            {/* Drag handle */}
+            <div
+              onMouseDown={startDragResize}
+              className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-10 group hover:bg-acme-navy/20 transition-colors"
+            >
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-full bg-acme-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            {/* Panel Header */}
+            <div className="px-3 py-2.5 border-b border-acme-gray-200 flex items-center justify-between flex-shrink-0 bg-acme-gray-50">
+              <div className="flex items-center gap-2">
+                {/* Panel Tab Switcher */}
+                <button
+                  onClick={() => setSidePanel('sessions')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                    sidePanel === 'sessions'
+                      ? 'bg-acme-navy text-white shadow-sm'
+                      : 'text-acme-gray-600 hover:text-acme-gray-800 hover:bg-white'
+                  }`}
+                >
+                  <i className="fas fa-clock-rotate-left text-[10px]"></i>
+                  Sessions
+                </button>
+                <button
+                  onClick={() => setSidePanel('comparison')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                    sidePanel === 'comparison'
+                      ? 'bg-acme-navy text-white shadow-sm'
+                      : 'text-acme-gray-600 hover:text-acme-gray-800 hover:bg-white'
+                  }`}
+                >
+                  <i className="fas fa-code-compare text-[10px]"></i>
+                  Compare
+                </button>
+              </div>
+              <button
+                onClick={() => setSidePanel(null)}
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-acme-gray-400 hover:text-acme-gray-700 hover:bg-acme-gray-200 transition-colors"
+                title="Close panel"
+              >
+                <i className="fas fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            {/* Panel Content */}
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {sidePanel === 'sessions' && (
+                <SessionBrowser
+                  onClose={() => setSidePanel(null)}
+                  onRerun={(task) => { setPrompt(task); setMode('basic'); setSidePanel(null); }}
+                />
+              )}
+              {sidePanel === 'comparison' && (
+                <SessionComparison onClose={() => setSidePanel(null)} />
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

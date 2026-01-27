@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acme UI Testing Agent</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            acme: {
+              navy: '#003B70',
+              'navy-light': '#004d94',
+              'navy-dark': '#002a52',
+              red: '#D9261C',
+              'red-light': '#e54338',
+              gray: {
+                50: '#f8f9fa',
+                100: '#f1f3f5',
+                200: '#e9ecef',
+                300: '#dee2e6',
+                400: '#ced4da',
+                500: '#adb5bd',
+                600: '#6c757d',
+                700: '#495057',
+                800: '#343a40',
+                900: '#212529',
+              }
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Prism.js for syntax highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+
+    /* ─── Native-style scrollbars ─── */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(0, 59, 112, 0.15) transparent;
+    }
+
+    *::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    *::-webkit-scrollbar-track {
+      background: transparent;
+      border-radius: 3px;
+    }
+
+    *::-webkit-scrollbar-thumb {
+      background: rgba(0, 59, 112, 0.15);
+      border-radius: 3px;
+      transition: background 0.2s;
+    }
+
+    *::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 59, 112, 0.35);
+    }
+
+    *::-webkit-scrollbar-thumb:active {
+      background: rgba(0, 59, 112, 0.5);
+    }
+
+    *::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+
+    /* Dark background scrollbars */
+    .scrollbar-dark {
+      scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+    }
+
+    .scrollbar-dark::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .scrollbar-dark::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .scrollbar-dark::-webkit-scrollbar-thumb:active {
+      background: rgba(255, 255, 255, 0.45);
+    }
+
+    /* Hide scrollbar but keep functionality */
+    .scrollbar-hide {
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .scrollbar-hide::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* ─── Button micro-interactions ─── */
+    .btn-press {
+      transition: transform 0.1s ease;
+    }
+    .btn-press:active {
+      transform: scale(0.97);
+    }
+
+    .btn-lift {
+      transition: all 0.15s ease;
+    }
+    .btn-lift:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+    }
+    .btn-lift:active {
+      transform: translateY(0);
+      box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
+    }
+
+    /* ─── Animations ─── */
+
+    /* Fade in */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeIn {
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    /* Slide in from right */
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(16px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    .animate-slideInRight {
+      animation: slideInRight 0.2s ease-out;
+    }
+
+    /* Shimmer sweep */
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .animate-shimmer {
+      animation: shimmer 1.5s infinite;
+    }
+
+    /* Shake (failure ceremony) */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      15% { transform: translateX(-4px); }
+      30% { transform: translateX(4px); }
+      45% { transform: translateX(-3px); }
+      60% { transform: translateX(3px); }
+      75% { transform: translateX(-2px); }
+      90% { transform: translateX(2px); }
+    }
+    .animate-shake {
+      animation: shake 0.5s ease-in-out;
+    }
+
+    /* Success pulse overlay */
+    @keyframes successPulse {
+      0% { opacity: 0.25; }
+      100% { opacity: 0; }
+    }
+    .animate-successPulse {
+      animation: successPulse 0.8s ease-out forwards;
+    }
+
+    /* Checkmark draw-in */
+    @keyframes checkDraw {
+      0% { stroke-dashoffset: 24; }
+      100% { stroke-dashoffset: 0; }
+    }
+    .animate-checkDraw {
+      animation: checkDraw 0.4s ease-out 0.2s forwards;
+    }
+
+    /* Confetti burst */
+    @keyframes confettiBurst {
+      0% { transform: scale(0); opacity: 1; }
+      100% { transform: scale(1) translateY(-30px); opacity: 0; }
+    }
+    .animate-confettiBurst {
+      animation: confettiBurst 0.6s ease-out forwards;
+    }
+
+    /* Pulse border (running state) */
+    @keyframes pulseBorder {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0, 59, 112, 0.4); }
+      50% { box-shadow: 0 0 0 4px rgba(0, 59, 112, 0.1); }
+    }
+    .animate-pulseBorder {
+      animation: pulseBorder 1.5s ease-in-out infinite;
+    }
+
+    /* Floating (empty state icon) */
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    .animate-float {
+      animation: float 3s ease-in-out infinite;
+    }
+
+    /* Dotted border pulse */
+    @keyframes borderPulse {
+      0%, 100% { border-color: rgba(0, 59, 112, 0.15); }
+      50% { border-color: rgba(0, 59, 112, 0.35); }
+    }
+    .animate-borderPulse {
+      animation: borderPulse 2s ease-in-out infinite;
+    }
+
+    /* Toast slide-in with bounce */
+    @keyframes toastSlideIn {
+      0% { opacity: 0; transform: translateX(100%); }
+      60% { opacity: 1; transform: translateX(-8px); }
+      80% { transform: translateX(3px); }
+      100% { transform: translateX(0); }
+    }
+    .animate-toastSlideIn {
+      animation: toastSlideIn 0.4s ease-out;
+    }
+
+    /* Toast slide-out */
+    @keyframes toastSlideOut {
+      0% { opacity: 1; transform: translateX(0); }
+      100% { opacity: 0; transform: translateX(100%); }
+    }
+    .animate-toastSlideOut {
+      animation: toastSlideOut 0.2s ease-in forwards;
+    }
+
+    /* Toast progress bar shrink */
+    @keyframes toastProgress {
+      from { width: 100%; }
+      to { width: 0%; }
+    }
+
+    /* Log entry slide-in */
+    @keyframes logEntryIn {
+      from { opacity: 0; transform: translateX(-12px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    .animate-logEntryIn {
+      animation: logEntryIn 0.2s ease-out;
+    }
+
+    /* Backdrop fade */
+    @keyframes backdropFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .animate-backdropFadeIn {
+      animation: backdropFadeIn 0.2s ease-out;
+    }
+
+    /* Modal scale-in */
+    @keyframes modalScaleIn {
+      from { opacity: 0; transform: scale(0.95) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .animate-modalScaleIn {
+      animation: modalScaleIn 0.2s ease-out;
+    }
+
+    /* Tab content crossfade */
+    .tab-content-enter {
+      animation: tabContentIn 0.15s ease-out;
+    }
+    @keyframes tabContentIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Smooth expand/collapse */
+    .expand-collapse {
+      transition: max-height 0.25s ease-out, opacity 0.2s ease-out;
+      overflow: hidden;
+    }
+
+    /* ─── Line clamp utilities ─── */
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .line-clamp-3 {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+  </style>
+</head>
+
+<body class="bg-acme-gray-100 text-acme-gray-900">
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
+</html>

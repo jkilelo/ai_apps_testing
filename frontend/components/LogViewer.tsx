@@ -137,7 +137,7 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, maxSteps = 30, currentStep 
     return (
       <div
         key={index}
-        className="group flex items-start gap-3 py-2 px-3 border-b border-acme-navy-dark/50 hover:bg-acme-navy-dark/30 transition-colors"
+        className="group flex items-start gap-3 py-2 px-3 border-b border-acme-navy-dark/50 hover:bg-acme-navy-dark/30 transition-colors animate-logEntryIn"
       >
         {/* Timestamp */}
         <span className="text-acme-gray-400 shrink-0 text-[10px] font-mono pt-0.5">
@@ -477,11 +477,26 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, maxSteps = 30, currentStep 
               </>
             ) : (
               <>
-                <div className="w-16 h-16 rounded-2xl bg-acme-navy-dark flex items-center justify-center mb-4">
-                  <i className="fas fa-terminal text-2xl text-acme-gray-500"></i>
+                <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-acme-navy-light/30 flex items-center justify-center mb-4 animate-borderPulse">
+                  <i className="fas fa-terminal text-2xl text-acme-gray-500 animate-float"></i>
                 </div>
-                <h3 className="text-sm font-semibold text-acme-gray-300 mb-1">Ready to Execute</h3>
-                <p className="text-xs text-acme-gray-400">Click Run to start your UI test</p>
+                <h3 className="text-sm font-semibold text-acme-gray-300 mb-2">Ready to Execute</h3>
+                <div className="flex items-center gap-3 text-[11px] text-acme-gray-400 mb-1">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center text-[9px] font-bold">1</span>
+                    Describe your test
+                  </span>
+                  <i className="fas fa-arrow-right text-[8px] text-acme-gray-500"></i>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center text-[9px] font-bold">2</span>
+                    Click Run
+                  </span>
+                  <i className="fas fa-arrow-right text-[8px] text-acme-gray-500"></i>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center text-[9px] font-bold">3</span>
+                    See results
+                  </span>
+                </div>
               </>
             )}
           </div>

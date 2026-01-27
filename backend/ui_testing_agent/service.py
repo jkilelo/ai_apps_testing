@@ -49,7 +49,7 @@ class UITestingService:
 
         Args:
             output_config: Configuration for output generation
-            model: LLM model to use (default: gemini-2.0-flash)
+            model: LLM model to use (default: gemini-3-pro-preview)
             headless: Run browser without visible window
         """
         self.output_config = output_config or OutputConfig()
@@ -153,7 +153,13 @@ class UITestingService:
 
         # Save raw history
         if self.output_config.save_raw_history and session.raw_history:
-            history_path = self._save_raw_history(session, output_dir)
+            self._save_raw_history(session, output_dir)
+
+        # Save replay recording for LLM-free replay
+        if session.replay_recording is not None:
+            replay_path = self._save_replay_recording(session, output_dir)
+            session.replay_recording_path = replay_path
+            print(f"[UITestingService] Saved replay recording: {replay_path}")
 
         # Copy screenshots
         if self.output_config.save_screenshots:
@@ -258,6 +264,20 @@ class UITestingService:
         filepath = os.path.join(output_dir, "raw_history.json")
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(session.raw_history, f, indent=2, default=str)
+
+        return filepath
+
+    def _save_replay_recording(self, session: TestSession, output_dir: str) -> str:
+        """Save replay recording for LLM-free replay.
+
+        The replay recording contains CSS selectors, XPath, and stable hashes
+        that allow replaying the test without needing an LLM.
+        """
+        filename = f"replay_recording_{session.session_id}.json"
+        filepath = os.path.join(output_dir, filename)
+
+        # RecordedSession has a save() method that writes to JSON
+        session.replay_recording.save(filepath)
 
         return filepath
 

@@ -9,8 +9,8 @@ import asyncio
 import json
 import uuid
 from datetime import datetime
-from typing import AsyncGenerator, Optional, Dict, Any, Callable, Awaitable
-from dataclasses import dataclass, field, asdict
+from typing import AsyncGenerator, Optional, Dict, Any
+from dataclasses import dataclass, field
 from enum import Enum
 
 
@@ -225,7 +225,7 @@ def create_step_callback(session: StreamingSession):
                 if hasattr(action, 'model_dump'):
                     try:
                         action_params = action.model_dump(exclude_none=True)
-                    except:
+                    except Exception:
                         pass
                 session.emit_action(action_name, action_params)
 

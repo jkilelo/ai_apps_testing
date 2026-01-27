@@ -6,8 +6,6 @@ import json
 import base64
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
-
 from ..models.test_session import TestSession
 from ..models.test_scenario import TestScenario
 from ..models.output_config import OutputConfig

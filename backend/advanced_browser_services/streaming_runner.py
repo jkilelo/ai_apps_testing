@@ -87,7 +87,7 @@ class StreamingAgentRunner:
         Returns:
             Final result dictionary
         """
-        session.emit_info(f"Initializing browser automation...")
+        session.emit_info("Initializing browser automation...")
         session.emit_info(f"Task: {task}")
 
         browser_result: Optional[BrowserResult] = None
@@ -164,7 +164,7 @@ class StreamingAgentRunner:
                 try:
                     await BrowserFactory.cleanup(browser_result)
                     session.emit_info("Browser closed")
-                except:
+                except Exception:
                     pass
 
     async def run_data_extraction(

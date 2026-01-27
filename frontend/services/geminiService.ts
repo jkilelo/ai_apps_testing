@@ -296,3 +296,193 @@ export const listSessions = async (): Promise<{ sessions: SessionInfo[] }> => {
 
     return response.json();
 };
+
+
+// ============== Replay API ==============
+
+export interface ReplaySessionInfo {
+    session_id: string;
+    task: string;
+    initial_url: string;
+    recorded_at: string;
+    action_count: number;
+    recording_path: string;
+}
+
+export interface ReplayResult {
+    success: boolean;
+    session_id: string;
+    actions_total: number;
+    actions_succeeded: number;
+    actions_failed: number;
+    failed_steps: number[];
+    errors: string[];
+    duration_seconds: number;
+}
+
+export interface ReplayRequest {
+    headless?: boolean;
+    stop_on_failure?: boolean;
+    sensitive_data?: Record<string, string>;
+}
+
+export interface ReplayInfo {
+    session_id: string;
+    task: string;
+    initial_url: string;
+    recorded_at: string;
+    browser_use_version: string;
+    action_count: number;
+    action_summary: Record<string, number>;
+    actions: Array<{
+        step: number;
+        type: string;
+        url?: string;
+        text?: string;
+        element_selector?: string;
+    }>;
+}
+
+/**
+ * List all sessions that have replay recordings available.
+ */
+export const listReplaySessions = async (): Promise<{ sessions: ReplaySessionInfo[]; total: number }> => {
+    const response = await fetch(`${API_BASE_URL}/replay/sessions`);
+
+    if (!response.ok) {
+        throw new Error(`Failed to list replay sessions: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
+/**
+ * Get detailed info about a replay recording.
+ */
+export const getReplayInfo = async (sessionId: string): Promise<ReplayInfo> => {
+    const response = await fetch(`${API_BASE_URL}/replay/${sessionId}/info`);
+
+    if (!response.ok) {
+        throw new Error(`Failed to get replay info: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
+/**
+ * Run a deterministic replay for a session.
+ */
+export const runReplay = async (sessionId: string, request?: ReplayRequest): Promise<ReplayResult> => {
+    const response = await fetch(`${API_BASE_URL}/replay/${sessionId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request || {}),
+    });
+
+    if (!response.ok) {
+        throw new Error(`Replay failed: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
+/**
+ * SSE streaming event types for replay
+ */
+export interface ReplayStreamEvent {
+    type: 'started' | 'step_start' | 'step_complete' | 'complete' | 'error' | 'keepalive';
+    session_id?: string;
+    total_actions?: number;
+    step?: number;
+    action_type?: string;
+    total?: number;
+    success?: boolean;
+    error?: string;
+    message?: string;
+    // Complete event fields
+    actions_total?: number;
+    actions_succeeded?: number;
+    actions_failed?: number;
+    failed_steps?: number[];
+    errors?: string[];
+    duration_seconds?: number;
+}
+
+export type ReplayStreamEventHandler = (event: ReplayStreamEvent) => void;
+
+/**
+ * Stream replay execution with real-time progress updates.
+ * Returns a cleanup function to abort the stream.
+ */
+export const streamReplay = (
+    sessionId: string,
+    request: ReplayRequest,
+    onEvent: ReplayStreamEventHandler,
+    onError?: (error: Error) => void,
+    onComplete?: () => void,
+): (() => void) => {
+    const abortController = new AbortController();
+
+    const startStream = async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/stream/replay/${sessionId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(request),
+                signal: abortController.signal,
+            });
+
+            if (!response.ok) {
+                throw new Error(`Replay stream failed: ${response.statusText}`);
+            }
+
+            const reader = response.body?.getReader();
+            if (!reader) {
+                throw new Error('No response body');
+            }
+
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+
+                if (done) {
+                    onComplete?.();
+                    break;
+                }
+
+                buffer += decoder.decode(value, { stream: true });
+
+                // Process complete SSE messages
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const eventData = JSON.parse(line.slice(6));
+                            onEvent(eventData as ReplayStreamEvent);
+
+                            if (eventData.type === 'complete' || eventData.type === 'error') {
+                                onComplete?.();
+                            }
+                        } catch (e) {
+                            // Skip invalid JSON
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            if ((error as Error).name !== 'AbortError') {
+                onError?.(error as Error);
+            }
+        }
+    };
+
+    startStream();
+
+    return () => {
+        abortController.abort();
+    };
+};

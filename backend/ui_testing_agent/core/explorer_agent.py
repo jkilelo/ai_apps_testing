@@ -4,7 +4,6 @@ Explorer Agent - Main agent for exploratory UI testing.
 Updated for browser-use 0.11.x API.
 """
 
-import asyncio
 import os
 from datetime import datetime
 from typing import Optional, Any
@@ -28,6 +27,9 @@ from ..models.processed_step import ProcessedStep
 from ..models.test_session import TestSession
 from .step_processor import StepProcessor
 from ..prompts.qa_engineer_prompt import build_qa_system_prompt
+
+# Import replay system for automatic recording during agent execution
+from .browser_use_replay import BrowserUseRecorder, RecordedSession
 
 # Import unified LLM factory (single source of truth - no circular imports)
 from advanced_browser_services.llm_factory import get_llm, DEFAULT_MODEL
@@ -56,7 +58,7 @@ class ExplorerAgent:
         Initialize the explorer agent.
 
         Args:
-            model: LLM model to use (default: gemini-2.0-flash)
+            model: LLM model to use (default: gemini-3-pro-preview)
             temperature: LLM temperature
             headless: Run browser without visible window
             output_config: Configuration for output generation
@@ -72,6 +74,8 @@ class ExplorerAgent:
 
         self.llm = get_llm(model=model, temperature=temperature)
         self._browser_result: Optional[BrowserResult] = None
+        self._recorder: Optional[BrowserUseRecorder] = None
+        self._recorded_session: Optional[RecordedSession] = None
 
         # Processing
         self.step_processor = StepProcessor()
@@ -108,10 +112,22 @@ class ExplorerAgent:
         """
         self.session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:8]}"
         self.recorded_steps = []
+        self._recorded_session = None
         started_at = datetime.now()
 
         # Create browser using the factory (single source of truth)
         self._browser_result = await BrowserFactory.create(headless=self.headless)
+
+        # Attach recorder to capture actions for offline replay
+        # This records all browser-use actions via event bus for LLM-free replay later
+        # Only attach if we have a BrowserSession (not agent-managed browser)
+        if self._browser_result.browser_type == "browser_session" and self._browser_result.browser:
+            self._recorder = BrowserUseRecorder(
+                session_id=self.session_id,
+                task=task,
+                initial_url=url,
+            )
+            await self._recorder.attach(self._browser_result.browser)
 
         # Build QA-focused system prompt
         qa_prompt = build_qa_system_prompt(task=task, url=url)
@@ -139,6 +155,10 @@ class ExplorerAgent:
             # Execute exploration and testing
             history: AgentHistoryList = await agent.run(max_steps=max_steps)
 
+            # Detach recorder and capture the recorded session for offline replay
+            if self._recorder and self._recorder._is_recording:
+                self._recorded_session = self._recorder.detach()
+
             # Process remaining steps (in case callback missed any)
             self._process_all_steps(history)
 
@@ -158,6 +178,9 @@ class ExplorerAgent:
                 steps=self.recorded_steps,
                 scenarios=scenarios,
             )
+
+            # Attach the recorded session for replay (will be saved as artifact)
+            session.replay_recording = self._recorded_session
 
             # Calculate statistics
             session.calculate_statistics()

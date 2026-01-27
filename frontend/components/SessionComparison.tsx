@@ -83,29 +83,12 @@ const SessionComparison: React.FC<SessionComparisonProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white rounded-xl border border-acme-gray-200 shadow-sm overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-acme-gray-100 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-acme-navy/10 flex items-center justify-center">
-              <i className="fas fa-columns text-acme-navy"></i>
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-acme-gray-800">Compare Sessions</h3>
-              <p className="text-[10px] text-acme-gray-600">
-                Side-by-side session comparison
-              </p>
-            </div>
-          </div>
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-lg flex items-center justify-center bg-acme-gray-50 hover:bg-acme-gray-100 text-acme-gray-600 hover:text-acme-gray-800 border border-acme-gray-200 transition-all"
-            >
-              <i className="fas fa-times text-xs"></i>
-            </button>
-          )}
+      <div className="px-3 py-2.5 border-b border-acme-gray-100 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <i className="fas fa-columns text-acme-navy text-xs"></i>
+          <span className="text-xs font-semibold text-acme-gray-800">Side-by-side comparison</span>
         </div>
       </div>
 

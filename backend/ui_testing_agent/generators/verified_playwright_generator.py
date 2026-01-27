@@ -8,9 +8,7 @@ This generator:
 4. Iterates if tests fail
 """
 
-import os
 import subprocess
-import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Optional

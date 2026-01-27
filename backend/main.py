@@ -457,7 +457,7 @@ async def list_sessions():
                         from datetime import datetime
                         dt = datetime.fromisoformat(metadata["created_at"])
                         session_info["created_at"] = dt.timestamp()
-                except:
+                except Exception:
                     pass
 
             sessions.append(session_info)
@@ -466,6 +466,358 @@ async def list_sessions():
     sessions.sort(key=lambda x: x["created_at"], reverse=True)
 
     return {"sessions": sessions}
+
+
+# ============== Replay Endpoints (using BrowserUseReplayer) ==============
+
+from ui_testing_agent.core.browser_use_replay import (
+    BrowserUseReplayer,
+    RecordedSession,
+)
+
+
+class ReplayRequest(BaseModel):
+    """Request for replay operation."""
+    headless: bool = True
+    stop_on_failure: bool = False
+    sensitive_data: Optional[dict] = None  # For filling in [SENSITIVE] fields
+
+
+class ReplayResponse(BaseModel):
+    """Response model for replay result."""
+    success: bool
+    session_id: str
+    actions_total: int
+    actions_succeeded: int
+    actions_failed: int
+    failed_steps: List[int] = []
+    errors: List[str] = []
+    duration_seconds: float = 0.0
+
+
+class ReplaySessionInfo(BaseModel):
+    """Info about a session available for replay."""
+    session_id: str
+    task: str
+    initial_url: str
+    recorded_at: str
+    action_count: int
+    recording_path: str
+
+
+def _find_replay_recording(session_dir: Path) -> Optional[Path]:
+    """Find replay recording file in session directory."""
+    # Check exact file names first
+    candidates = [
+        session_dir / "replay_recording.json",
+        session_dir / "recording.json",
+        session_dir / "recorded_session.json",
+    ]
+    for path in candidates:
+        if path.exists():
+            return path
+
+    # Also search for pattern-based names (replay_recording_*.json)
+    for path in session_dir.glob("replay_recording_*.json"):
+        return path
+
+    return None
+
+
+@app.get("/replay/sessions")
+async def list_replay_sessions():
+    """
+    List all sessions that have replay recordings available.
+
+    Only returns sessions with valid replay_recording.json files.
+    """
+    if not TEST_OUTPUTS_DIR.exists():
+        return {"sessions": [], "total": 0}
+
+    sessions = []
+    for item in TEST_OUTPUTS_DIR.iterdir():
+        if not item.is_dir():
+            continue
+
+        recording_path = _find_replay_recording(item)
+        if not recording_path:
+            continue
+
+        try:
+            # Load session to get metadata
+            recorded = RecordedSession.load(str(recording_path))
+            # Use directory name as session_id (for API lookups)
+            sessions.append(ReplaySessionInfo(
+                session_id=item.name,  # Use directory name, not recording's internal ID
+                task=recorded.task,
+                initial_url=recorded.initial_url,
+                recorded_at=recorded.recorded_at,
+                action_count=len(recorded.actions),
+                recording_path=str(recording_path),
+            ))
+        except Exception:
+            # Skip invalid recordings
+            continue
+
+    # Sort by recorded_at (newest first)
+    sessions.sort(key=lambda x: x.recorded_at, reverse=True)
+
+    return {"sessions": sessions, "total": len(sessions)}
+
+
+@app.get("/replay/{session_id}/info")
+async def get_replay_info(session_id: str):
+    """
+    Get detailed info about a replay recording.
+
+    Returns session metadata and action summary without running the replay.
+    """
+    session_dir = TEST_OUTPUTS_DIR / session_id
+    if not session_dir.exists():
+        raise HTTPException(status_code=404, detail=f"Session not found: {session_id}")
+
+    recording_path = _find_replay_recording(session_dir)
+    if not recording_path:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No replay recording found for session: {session_id}"
+        )
+
+    try:
+        recorded = RecordedSession.load(str(recording_path))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load recording: {e}")
+
+    # Summarize actions by type
+    action_summary = {}
+    for action in recorded.actions:
+        action_type = action.action_type.value
+        action_summary[action_type] = action_summary.get(action_type, 0) + 1
+
+    return {
+        "session_id": recorded.session_id,
+        "task": recorded.task,
+        "initial_url": recorded.initial_url,
+        "recorded_at": recorded.recorded_at,
+        "browser_use_version": recorded.browser_use_version,
+        "action_count": len(recorded.actions),
+        "action_summary": action_summary,
+        "actions": [
+            {
+                "step": a.step_number,
+                "type": a.action_type.value,
+                "url": a.url,
+                "text": "[SENSITIVE]" if a.is_sensitive else a.text,
+                "element_selector": a.element.css_selector if a.element else None,
+            }
+            for a in recorded.actions
+        ],
+    }
+
+
+@app.post("/replay/{session_id}", response_model=ReplayResponse)
+async def run_replay(session_id: str, request: Optional[ReplayRequest] = None):
+    """
+    Run a deterministic replay for a session.
+
+    This replays recorded actions WITHOUT using an LLM - pure browser automation.
+    Uses browser-use's event system for reliable element finding.
+
+    Args:
+        session_id: The session to replay
+        request: Optional configuration (headless mode, stop on failure, sensitive data)
+
+    Returns:
+        ReplayResponse with success/failure details
+    """
+    request = request or ReplayRequest()
+
+    session_dir = TEST_OUTPUTS_DIR / session_id
+    if not session_dir.exists():
+        raise HTTPException(status_code=404, detail=f"Session not found: {session_id}")
+
+    recording_path = _find_replay_recording(session_dir)
+    if not recording_path:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No replay recording found for session: {session_id}"
+        )
+
+    # Load the recorded session
+    try:
+        recorded = RecordedSession.load(str(recording_path))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load recording: {e}")
+
+    # Create browser session for replay
+    from browser_use import BrowserSession
+
+    browser_session = BrowserSession(
+        headless=request.headless,
+        disable_security=True,
+    )
+
+    try:
+        # Start the browser session
+        await browser_session.start()
+
+        # Create replayer and run
+        replayer = BrowserUseReplayer()
+        result = await replayer.replay(
+            session=recorded,
+            browser_session=browser_session,
+            stop_on_failure=request.stop_on_failure,
+            sensitive_data=request.sensitive_data,
+        )
+
+        return ReplayResponse(
+            success=result.success,
+            session_id=session_id,
+            actions_total=result.actions_total,
+            actions_succeeded=result.actions_succeeded,
+            actions_failed=result.actions_failed,
+            failed_steps=result.failed_steps,
+            errors=result.errors,
+            duration_seconds=result.duration_seconds,
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Replay failed: {e}")
+
+    finally:
+        # Clean up browser
+        try:
+            await browser_session.stop()
+        except Exception:
+            pass
+
+
+@app.post("/stream/replay/{session_id}")
+async def stream_replay(session_id: str, request: Optional[ReplayRequest] = None):
+    """
+    Run replay with SSE streaming progress updates.
+
+    Streams real-time progress as each action executes.
+    """
+    request = request or ReplayRequest()
+
+    session_dir = TEST_OUTPUTS_DIR / session_id
+    if not session_dir.exists():
+        raise HTTPException(status_code=404, detail=f"Session not found: {session_id}")
+
+    recording_path = _find_replay_recording(session_dir)
+    if not recording_path:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No replay recording found for session: {session_id}"
+        )
+
+    # Load the recorded session
+    try:
+        recorded = RecordedSession.load(str(recording_path))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load recording: {e}")
+
+    async def event_generator():
+        from browser_use import BrowserSession
+
+        browser_session = BrowserSession(
+            headless=request.headless,
+            disable_security=True,
+        )
+
+        try:
+            await browser_session.start()
+
+            # Progress tracking via callbacks
+            progress_events = asyncio.Queue()
+
+            def on_step_start(step: int, action):
+                asyncio.get_event_loop().call_soon_threadsafe(
+                    progress_events.put_nowait,
+                    {
+                        "type": "step_start",
+                        "step": step,
+                        "action_type": action.action_type.value,
+                        "total": len(recorded.actions),
+                    }
+                )
+
+            def on_step_complete(step: int, success: bool, error: Optional[str]):
+                asyncio.get_event_loop().call_soon_threadsafe(
+                    progress_events.put_nowait,
+                    {
+                        "type": "step_complete",
+                        "step": step,
+                        "success": success,
+                        "error": error,
+                    }
+                )
+
+            replayer = BrowserUseReplayer(
+                on_step_start=on_step_start,
+                on_step_complete=on_step_complete,
+            )
+
+            # Run replay in background
+            async def run_replay_task():
+                result = await replayer.replay(
+                    session=recorded,
+                    browser_session=browser_session,
+                    stop_on_failure=request.stop_on_failure,
+                    sensitive_data=request.sensitive_data,
+                )
+                await progress_events.put({"type": "complete", "result": result})
+
+            task = asyncio.create_task(run_replay_task())
+
+            # Send initial event
+            yield f"data: {json.dumps({'type': 'started', 'session_id': session_id, 'total_actions': len(recorded.actions)})}\n\n"
+
+            # Stream progress events
+            while True:
+                try:
+                    event = await asyncio.wait_for(progress_events.get(), timeout=60.0)
+
+                    if event["type"] == "complete":
+                        result = event["result"]
+                        final_data = {
+                            "type": "complete",
+                            "success": result.success,
+                            "actions_total": result.actions_total,
+                            "actions_succeeded": result.actions_succeeded,
+                            "actions_failed": result.actions_failed,
+                            "failed_steps": result.failed_steps,
+                            "errors": result.errors,
+                            "duration_seconds": result.duration_seconds,
+                        }
+                        yield f"data: {json.dumps(final_data)}\n\n"
+                        break
+                    else:
+                        yield f"data: {json.dumps(event)}\n\n"
+
+                except asyncio.TimeoutError:
+                    # Send keepalive
+                    yield f"data: {json.dumps({'type': 'keepalive'})}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+        finally:
+            try:
+                await browser_session.stop()
+            except Exception:
+                pass
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
 
 
 if __name__ == "__main__":
