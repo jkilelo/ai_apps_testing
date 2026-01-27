@@ -15,7 +15,7 @@ load_dotenv()
 DEFAULT_MODEL = "gemini-3-pro-preview"
 
 
-def get_llm(model: str = DEFAULT_MODEL, temperature: float = 0.7, api_key: Optional[str] = None):
+def get_llm(model: str = DEFAULT_MODEL, temperature: float = 1, api_key: Optional[str] = None):
     """
     Get an LLM instance based on model name - SINGLE SOURCE OF TRUTH for all LLM instantiation.
 
@@ -59,12 +59,3 @@ def get_llm(model: str = DEFAULT_MODEL, temperature: float = 0.7, api_key: Optio
         if not key:
             raise ValueError("GEMINI_API_KEY or GOOGLE_API_KEY not found in environment variables")
         return ChatGoogle(model=model, temperature=temperature, api_key=key)
-
-
-def get_gemini_llm(model: str = DEFAULT_MODEL, temperature: float = 0.7):
-    """
-    DEPRECATED: Use get_llm() instead.
-
-    This function is kept for backwards compatibility.
-    """
-    return get_llm(model=model, temperature=temperature)

@@ -47,6 +47,17 @@ class TestSession(BaseModel):
         description="Raw AgentHistoryList.model_dump() for debugging/replay"
     )
 
+    # === Replay Recording (for LLM-free replay) ===
+    replay_recording: Optional[Any] = Field(
+        default=None,
+        description="RecordedSession for offline replay without LLM. "
+                    "Contains CSS selectors, XPath, stable hash for element matching."
+    )
+    replay_recording_path: Optional[str] = Field(
+        default=None,
+        description="Path to saved replay recording JSON file"
+    )
+
     # === Processed Data ===
     steps: list[ProcessedStep] = Field(
         default_factory=list,
@@ -159,6 +170,7 @@ class TestSession(BaseModel):
                 "html_report": self.html_report_path,
                 "json_report": self.json_report_path,
                 "video": self.video_path,
+                "replay_recording": self.replay_recording_path,
             },
         }
 

@@ -1,3 +1,11 @@
+
+tests/
+src/
+.playwright*/
+.github/
+v2/
+design/
+.vite/
 # Dependencies
 node_modules/
 /dist
@@ -58,6 +66,8 @@ logs
 # Test outputs & reports
 test_outputs/
 **/test_outputs/
+parity_tests/
+**/parity_tests/
 reports/
 **/reports/
 screenshots/
@@ -79,8 +89,9 @@ push_out.txt
 # Claude Code
 .claude/
 
-# Local test scripts (optional - remove if you want to commit them)
-backend/test_*.py
+# Recorded test sessions (test data, not source code)
+recorded_tests/
+**/recorded_tests/
 
 # Browser profiles (cache data)
 browser_profiles/
