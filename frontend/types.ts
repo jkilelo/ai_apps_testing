@@ -34,7 +34,7 @@ export interface AutomationResult {
 
 // ============== Advanced Browser Service Types ==============
 
-export type AgentMode = 'basic' | 'extract' | 'research' | 'compare-products' | 'compare-pages';
+export type AgentMode = 'basic' | 'extract' | 'research' | 'compare-products' | 'compare-pages' | 'a11y-audit';
 
 export interface TaskStep {
   action: string;

@@ -14,6 +14,7 @@ from browser_use import Agent
 
 from ui_testing_agent import UITestingService, OutputConfig
 from ui_testing_agent.core.browser_factory import BrowserFactory, BrowserResult
+from ui_testing_agent.a11y_service import AccessibilityAuditService
 from .llm_factory import get_llm, DEFAULT_MODEL
 from .streaming import (
     StreamingSession,
@@ -367,6 +368,107 @@ class StreamingAgentRunner:
             return {
                 "success": False,
                 "error": str(e)
+            }
+
+    async def run_a11y_audit(
+        self,
+        session: StreamingSession,
+        url: str,
+        max_steps: int = 40,
+        headless: bool = False,
+        skip_behavioral: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Run an accessibility audit with streaming.
+
+        Phase 1: axe-core automated scan
+        Phase 2: AI behavioral accessibility testing (optional)
+        """
+        session.emit_info("Initializing Accessibility Audit...")
+        session.emit_info(f"URL: {url}")
+        if skip_behavioral:
+            session.emit_info("Mode: Automated scan only (behavioral testing skipped)")
+
+        # Setup output directory
+        output_dir = f"./test_outputs/{session.session_id}"
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+        metadata = {
+            "session_id": session.session_id,
+            "type": "a11y_audit",
+            "url": url,
+            "max_steps": max_steps,
+            "headless": headless,
+            "skip_behavioral": skip_behavioral,
+            "created_at": datetime.now().isoformat(),
+        }
+        (output_path / "metadata.json").write_text(json.dumps(metadata, indent=2))
+
+        config = OutputConfig(
+            output_directory=output_dir,
+            create_session_subdir=False,
+            generate_playwright_code=False,
+            generate_test_cases=False,
+            generate_html_report=True,
+            generate_json_report=True,
+            save_screenshots=True,
+            save_raw_history=False,
+        )
+
+        service = AccessibilityAuditService(
+            output_config=config,
+            model=self.model,
+            headless=headless,
+        )
+
+        try:
+            step_callback = create_step_callback(session)
+            session.emit_info("Starting accessibility audit...")
+
+            audit_session = await service.run_audit(
+                url=url,
+                max_steps=max_steps,
+                skip_behavioral=skip_behavioral,
+                step_callback=step_callback,
+                done_callback=None,
+            )
+
+            # Emit results
+            score = audit_session.audit_score
+            if score:
+                session.emit_success(
+                    f"Audit complete: Score {score.overall_score}/100 (Grade {score.grade})"
+                )
+            if audit_session.html_report_path:
+                session.emit_info(f"Report: {audit_session.html_report_path}")
+
+            session.emit_done(
+                summary=f"Accessibility audit complete — Score: {score.overall_score}/100 ({score.grade})" if score else "Audit complete",
+                success=True,
+                extra_data={
+                    "output_directory": audit_session.output_directory,
+                    "score": score.overall_score if score else None,
+                    "grade": score.grade if score else None,
+                    "total_violations": score.total_violations if score else 0,
+                },
+            )
+
+            return {
+                "success": True,
+                "score": score.overall_score if score else None,
+                "grade": score.grade if score else None,
+                "output_directory": audit_session.output_directory,
+            }
+
+        except Exception as e:
+            session.emit_error(f"Accessibility audit failed: {str(e)}")
+            session.emit_done(
+                summary=f"Accessibility audit failed: {str(e)}",
+                success=False,
+            )
+            return {
+                "success": False,
+                "error": str(e),
             }
 
     def cleanup_session(self, session_id: str):

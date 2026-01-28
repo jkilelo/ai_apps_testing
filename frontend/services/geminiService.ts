@@ -232,6 +232,36 @@ export const streamComparePages = (
 };
 
 
+// ============== Accessibility Audit Streaming ==============
+
+export interface StreamingA11yAuditParams {
+    url: string;
+    max_steps?: number;
+    headless?: boolean;
+    skip_behavioral?: boolean;
+}
+
+export const streamA11yAudit = (
+    params: StreamingA11yAuditParams,
+    onEvent: StreamingEventHandler,
+    onError?: (error: Error) => void,
+    onComplete?: () => void,
+) => {
+    return createStreamingConnection(
+        '/stream/a11y-audit',
+        {
+            url: params.url,
+            max_steps: params.max_steps ?? 40,
+            headless: params.headless ?? false,
+            skip_behavioral: params.skip_behavioral ?? false,
+        },
+        onEvent,
+        onError,
+        onComplete,
+    );
+};
+
+
 // ============== Artifacts API ==============
 
 export interface ArtifactInfo {

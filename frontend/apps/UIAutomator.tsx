@@ -6,6 +6,7 @@ import {
   streamResearchTopic,
   streamCompareProducts,
   streamComparePages,
+  streamA11yAudit,
   StreamingEvent,
 } from '../services/geminiService';
 import LogViewer from '../components/LogViewer';
@@ -57,6 +58,14 @@ const MODES: { id: AgentMode; name: string; icon: string; description: string; p
     description: 'Analyze and compare web pages',
     placeholder: '',
     suggestedSteps: 30
+  },
+  {
+    id: 'a11y-audit',
+    name: 'A11y',
+    icon: 'fa-universal-access',
+    description: 'Accessibility audit with WCAG scoring',
+    placeholder: '',
+    suggestedSteps: 40
   },
 ];
 
@@ -139,6 +148,10 @@ const UIAutomator: React.FC = () => {
   const [pageUrls, setPageUrls] = useState('');
   const [comparisonCriteria, setComparisonCriteria] = useState('');
 
+  // A11y audit state
+  const [a11yUrl, setA11yUrl] = useState('');
+  const [skipBehavioral, setSkipBehavioral] = useState(false);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -165,7 +178,7 @@ const UIAutomator: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [loading, mode, prompt, extractUrl, extractSchema, researchTopic_, products, aspects, pageUrls, comparisonCriteria, maxSteps]);
+  }, [loading, mode, prompt, extractUrl, extractSchema, researchTopic_, products, aspects, pageUrls, comparisonCriteria, a11yUrl, maxSteps]);
 
   // Drag-to-resize side panel handlers
   useEffect(() => {
@@ -445,6 +458,20 @@ const UIAutomator: React.FC = () => {
         );
         break;
 
+      case 'a11y-audit':
+        if (!a11yUrl.trim()) {
+          addLog('Please enter a URL to audit', 'error', 'system');
+          setLoading(false);
+          return;
+        }
+        cleanup = streamA11yAudit(
+          { url: a11yUrl, max_steps: maxSteps, headless, skip_behavioral: skipBehavioral },
+          handleStreamEvent,
+          handleError,
+          handleComplete,
+        );
+        break;
+
       default:
         addLog('Unknown mode', 'error', 'system');
         setLoading(false);
@@ -684,6 +711,34 @@ const UIAutomator: React.FC = () => {
               placeholder="What to analyze"
               className="w-48 p-2 bg-acme-gray-50 border border-acme-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-acme-navy outline-none"
             />
+          </div>
+        );
+
+      case 'a11y-audit':
+        return (
+          <div className="flex gap-2 items-center">
+            <input
+              type="url"
+              value={a11yUrl}
+              onChange={(e) => setA11yUrl(e.target.value)}
+              placeholder="URL to audit (https://example.com)"
+              className="flex-1 p-2 bg-acme-gray-50 border border-acme-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-acme-navy outline-none"
+            />
+            <label className="flex items-center gap-2 px-3 py-2 bg-acme-gray-50 border border-acme-gray-200 rounded-lg cursor-pointer hover:bg-acme-gray-100 transition-colors">
+              <input
+                type="checkbox"
+                checked={skipBehavioral}
+                onChange={(e) => setSkipBehavioral(e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-acme-gray-300 text-acme-navy focus:ring-acme-navy"
+              />
+              <span className="text-xs text-acme-gray-700 font-medium whitespace-nowrap">Scan only</span>
+            </label>
+            {a11yUrl && (
+              <span className="text-xs text-emerald-700 font-medium bg-emerald-50 px-2 py-1 rounded-lg flex items-center gap-1">
+                <i className="fas fa-check-circle"></i>
+                Ready
+              </span>
+            )}
           </div>
         );
 

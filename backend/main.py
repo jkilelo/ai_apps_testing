@@ -267,6 +267,56 @@ async def stream_compare_pages(request: StreamingComparePagesRequest):
     )
 
 
+class StreamingA11yAuditRequest(BaseModel):
+    """Request for streaming accessibility audit."""
+    url: str
+    max_steps: int = 40
+    headless: bool = False
+    skip_behavioral: bool = False
+
+
+@app.post("/stream/a11y-audit")
+async def stream_a11y_audit(request: StreamingA11yAuditRequest):
+    """
+    Run an accessibility audit with SSE streaming.
+
+    Phase 1: axe-core automated WCAG scanning
+    Phase 2: AI behavioral accessibility testing (keyboard nav, focus, ARIA)
+
+    Returns real-time progress events and a final score/grade.
+    """
+    session = streaming_runner.create_session()
+
+    async def event_generator():
+        task_coro = streaming_runner.run_a11y_audit(
+            session=session,
+            url=request.url,
+            max_steps=request.max_steps,
+            headless=request.headless,
+            skip_behavioral=request.skip_behavioral,
+        )
+
+        task = asyncio.create_task(task_coro)
+
+        try:
+            async for event in session.events():
+                yield event
+        finally:
+            if not task.done():
+                task.cancel()
+            streaming_runner.cleanup_session(session.session_id)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
+
 # ============== Artifacts Endpoints ==============
 
 # Base directory for test outputs
